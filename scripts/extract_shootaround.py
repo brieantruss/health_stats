@@ -1,0 +1,117 @@
+import re
+import os
+import sys
+import pandas as pd
+import io
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+from datetime import datetime
+
+# --- Google Drive Configuration ---
+DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
+DRIVE_FOLDER_ID = '1RnPek-KTsVmpJPw4M3kZaKwYaec5aCUw'
+
+# --- Local Save Path Configuration ---
+# LOCAL_SAVE_PATH will be passed as a command-line argument
+
+# --- Extract shootaround files ---
+
+def extract_shootaround(service_account_file, local_save_path):
+    """Downloads GENERIC Samsung Health files from Google Drive with valid distance data to a local directory, checking for existing files and latest modified date."""
+
+    print(f"Using service account file: {service_account_file}")
+    print(f"Saving files to local path: {local_save_path}")
+
+    # Authenticate with Google Drive API
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            service_account_file, scopes=DRIVE_SCOPES)
+        drive_service = build('drive', 'v3', credentials=credentials)
+    except Exception as e:
+        print(f"Authentication failed: {e}")
+        return
+
+    # Ensure the local save directory exists
+    os.makedirs(local_save_path, exist_ok=True)
+
+    # Get list of files in the Google Drive folder
+    page_token = None
+    all_items = []
+    while True:
+        try:
+            results = drive_service.files().list(
+                q=f"'{DRIVE_FOLDER_ID}' in parents",
+                fields="nextPageToken, files(id, name, modifiedTime)",
+                pageToken=page_token
+            ).execute()
+            items = results.get('files', [])
+            all_items.extend(items)
+            page_token = results.get('nextPageToken', None)
+            if page_token is None:
+                break
+        except Exception as e:
+            print(f"Error listing files from Google Drive: {e}")
+            break
+
+    # New regex pattern for GENERIC files
+    filename_pattern = re.compile(r"GENERIC \d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2} Samsung Health\.csv")
+    files_downloaded = False
+
+    if not all_items:
+        print('No files found in the Google Drive folder.')
+    else:
+        for item in all_items:
+            file_name = item['name']
+            file_modified_time = item['modifiedTime']
+            local_file_path = os.path.join(local_save_path, file_name)
+
+            if filename_pattern.match(file_name):
+                file_id = item['id']
+
+                try:
+                    local_file_exists = os.path.exists(local_file_path)
+                    drive_modified_timestamp = int(datetime.strptime(file_modified_time, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp())
+                    local_modified_timestamp = os.path.getmtime(local_file_path) if local_file_exists else 0.0
+
+                    if not local_file_exists or local_modified_timestamp < drive_modified_timestamp:
+                        print(f'Downloading/Updating file: {file_name}')
+
+                        # Download file content
+                        request = drive_service.files().get_media(fileId=file_id)
+                        response = request.execute()
+
+                        # Read the content into a pandas DataFrame to check the distance field
+                        df = pd.read_csv(io.StringIO(response.decode('utf-8')))
+
+                        if 'Distance (miles)' in df.columns and (df['Distance (miles)'] > 0).any():
+                            # If distance is valid, save the file
+                            with open(local_file_path, 'wb') as f:
+                                f.write(response)
+
+                            # Update the local file's modification time
+                            os.utime(local_file_path, (drive_modified_timestamp, drive_modified_timestamp))
+
+                            print(f'Successfully downloaded/updated file {file_name} to {local_file_path}')
+                            files_downloaded = True
+                        else:
+                            print(f'Skipping file {file_name} - distance field is empty or zero.')
+                    else:
+                        print(f'Skipping file {file_name} - no changes detected.')
+                except Exception as e:
+                    print(f"An error occurred processing {file_name}: {e}")
+            else:
+                print(f"Skipping file {file_name} - does not match the pattern.")
+
+    if not files_downloaded:
+        print("No new updates.")
+
+if __name__ == '__main__':
+    # Expecting two arguments: service_account_file and local_save_path
+    if len(sys.argv) != 3:
+        print("Usage: python3 extract_shootaround.py <service_account_file_path> <local_save_path>")
+        sys.exit(1)
+
+    service_account_file = sys.argv[1]
+    local_save_path = sys.argv[2]
+
+    extract_shootaround(service_account_file, local_save_path)
