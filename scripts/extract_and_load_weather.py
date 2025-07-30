@@ -382,3 +382,5 @@ if __name__ == '__main__':
     logging.info("Starting weather data processing script...")
     status_message, status_code = process_weather_data(request_mock=None)
     logging.info(f"Script finished with status: {status_code} - {status_message}")
+
+# end
