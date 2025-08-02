@@ -17,7 +17,7 @@ DRIVE_FOLDER_ID = '1RnPek-KTsVmpJPw4M3kZaKwYaec5aCUw'
 # --- Extract shootaround files ---
 
 def extract_shootaround(service_account_file, local_save_path):
-    """Downloads GENERIC Samsung Health files from Google Drive with valid distance data to a local directory, checking for existing files and latest modified date."""
+    """Downloads GENERIC Samsung Health files from Google Drive to a local directory, checking for existing files and latest modified date."""
 
     print(f"Using service account file: {service_account_file}")
     print(f"Saving files to local path: {local_save_path}")
@@ -80,21 +80,15 @@ def extract_shootaround(service_account_file, local_save_path):
                         request = drive_service.files().get_media(fileId=file_id)
                         response = request.execute()
 
-                        # Read the content into a pandas DataFrame to check the distance field
-                        df = pd.read_csv(io.StringIO(response.decode('utf-8')))
+                        # Save the file directly without checking the distance field
+                        with open(local_file_path, 'wb') as f:
+                            f.write(response)
 
-                        if 'Distance (miles)' in df.columns and (df['Distance (miles)'] > 0).any():
-                            # If distance is valid, save the file
-                            with open(local_file_path, 'wb') as f:
-                                f.write(response)
+                        # Update the local file's modification time
+                        os.utime(local_file_path, (drive_modified_timestamp, drive_modified_timestamp))
 
-                            # Update the local file's modification time
-                            os.utime(local_file_path, (drive_modified_timestamp, drive_modified_timestamp))
-
-                            print(f'Successfully downloaded/updated file {file_name} to {local_file_path}')
-                            files_downloaded = True
-                        else:
-                            print(f'Skipping file {file_name} - distance field is empty or zero.')
+                        print(f'Successfully downloaded/updated file {file_name} to {local_file_path}')
+                        files_downloaded = True
                     else:
                         print(f'Skipping file {file_name} - no changes detected.')
                 except Exception as e:
