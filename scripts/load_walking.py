@@ -12,7 +12,7 @@ db_config = {
 }
 
 # Table name in your MySQL database
-table_name = "walking" # Changed to walking as per request
+table_name = "walking"
 
 def load_single_csv_to_mysql(db_config, file_path, table_name):
     """
@@ -35,11 +35,14 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
 
         with open(file_path, 'r', newline='', encoding='utf-8') as csv_file:
             csv_reader = csv.reader(csv_file)
-            header = next(csv_reader) # Skip the header row
+            # Read and verify the header row before skipping
+            header = next(csv_reader)
+            
+            # The CSV file has 14 original columns + 1 'last_updated' = 15 total fields.
+            # Your INSERT statement uses 14 of them (skipping 'Source app').
+            required_columns = 15 
 
             # Define the SQL INSERT statement matching the 'walking' table schema
-            # IMPORTANT: The column names in the INSERT statement must exactly match
-            # the column names in your 'CREATE TABLE walking' statement, including spaces and capitalization.
             sql = f"""
             INSERT INTO {table_name} (
             activity_type,
@@ -55,35 +58,61 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
             max_heart_rate,
             average_speed,
             max_speed,
-            last_updated    
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) -- ADDED: %s for 'last_updated'
+            last_updated 
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
 
             data_to_insert = []
-            for row_num, row in enumerate(csv_reader, start=2): # Start counting from line 2 for errors
-                # Ensure row has enough columns based on the CSV header (14 columns now)
-                if len(row) < 14: # CHANGED: from 13 to 14
-                    print(f"Skipping malformed row {row_num} in {os.path.basename(file_path)} (too few columns): {row}")
+            for row_num, row in enumerate(csv_reader, start=2):
+                
+                # Check for the correct number of columns
+                if len(row) < required_columns:
+                    print(f"Skipping malformed row {row_num} in {os.path.basename(file_path)} (too few columns, expected {required_columns}): {row}")
                     continue
 
                 try:
-                    # Extract and convert data according to the 'walking' table schema
-                    activity_type = row[0]
-                    activity_name = row[1]
-                    activity_date = row[2] # Kept as VARCHAR(50)
-                    activity_time = row[3] # Kept as VARCHAR(50)
+                    # --- CRITICAL FIX: CORRECTED INDICES TO MATCH CSV FILE ---
+                    # CSV Index 0: 'Source app' (Skipped, not in SQL schema)
+                    
+                    # CSV Index 1 -> SQL activity_type
+                    activity_type = row[1]
+                    # CSV Index 2 -> SQL activity_name
+                    activity_name = row[2]
+                    # CSV Index 3 -> SQL Date
+                    activity_date = row[3] 
+                    # CSV Index 4 -> SQL Time (string, no conversion)
+                    activity_time = row[4] 
 
-                    # Safely convert numeric fields, defaulting to None if conversion fails
-                    elapsed_time_seconds = int(float(row[4])) if row[4] else None
-                    active_time_seconds = int(float(row[5])) if row[5] else None
-                    distance_miles = float(row[6]) if row[6] else None
-                    calories_kcal = float(row[7]) if row[7] else None
-                    steps = int(row[8]) if row[8] else None
-                    avg_heart_rate = int(row[9]) if row[9] else None
-                    max_heart_rate = int(row[10]) if row[10] else None
-                    avg_speed = float(row[11]) if row[11] else None
-                    max_speed = float(row[12]) if row[12] else None
-                    last_updated = row[13] # ADDED: Extraction of 'last_updated'
+                    # CSV Index 5 -> SQL elapsed_time (Fix: was incorrectly row[4])
+                    # Ensure conversion logic is applied to the correct field
+                    elapsed_time_seconds = int(float(row[5])) if row[5] else None
+                    
+                    # CSV Index 6 -> SQL active_time (Fix: was incorrectly row[5])
+                    active_time_seconds = int(float(row[6])) if row[6] else None
+                    
+                    # CSV Index 7 -> SQL distance_miles (Fix: was incorrectly row[6])
+                    distance_miles = float(row[7]) if row[7] else None
+                    
+                    # CSV Index 8 -> SQL calories_kcal (Fix: was incorrectly row[7])
+                    calories_kcal = float(row[8]) if row[8] else None
+                    
+                    # CSV Index 9 -> SQL Steps (Fix: was incorrectly row[8])
+                    steps = int(row[9]) if row[9] else None
+                    
+                    # CSV Index 10 -> SQL average_heart_rate (Fix: was incorrectly row[9])
+                    avg_heart_rate = int(row[10]) if row[10] else None
+                    
+                    # CSV Index 11 -> SQL max_heart_rate (Fix: was incorrectly row[10])
+                    max_heart_rate = int(row[11]) if row[11] else None
+                    
+                    # CSV Index 12 -> SQL average_speed (Fix: was incorrectly row[11])
+                    avg_speed = float(row[12]) if row[12] else None
+                    
+                    # CSV Index 13 -> SQL max_speed (Fix: was incorrectly row[12])
+                    max_speed = float(row[13]) if row[13] else None
+                    
+                    # CSV Index 14 -> SQL last_updated (Fix: was incorrectly row[13])
+                    last_updated = row[14]
 
                     data_to_insert.append((
                         activity_type,
@@ -99,7 +128,7 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
                         max_heart_rate,
                         avg_speed,
                         max_speed,
-                        last_updated # ADDED: The 'last_updated' value
+                        last_updated
                     ))
 
                 except ValueError as e:
