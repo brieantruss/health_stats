@@ -1,0 +1,14 @@
+# Airflow Orchestration
+apache-airflow>=2.0.0
+
+# Data Processing & Manipulation
+pandas
+requests
+
+# Google Drive & GCS Integration
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+
+# Database Connectivity (MySQL)
+mysql-connector-python

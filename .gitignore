@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets and Config
+.env
+*.json
+*.key
+
+# Optional: Ignore manual backups if you prefer
+*_bu.py
+*_backup.py
