@@ -3,7 +3,6 @@ import sys
 import subprocess
 from datetime import timedelta
 from prefect import flow, task
-from prefect.client.schemas.schedules import IntervalSchedule
 
 # Base directory for the repository
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -91,18 +90,18 @@ if __name__ == "__main__":
     
     # Define deployments
     deployments = [
-        blood_pressure_flow.to_deployment(name="blood-pressure", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        cycling_flow.to_deployment(name="cycling", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        heart_rate_flow.to_deployment(name="heart-rate", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        oxygen_flow.to_deployment(name="oxygen", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        running_flow.to_deployment(name="running", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        shootaround_flow.to_deployment(name="shootaround", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        sleep_flow.to_deployment(name="sleep", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        steps_flow.to_deployment(name="steps", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        swimming_flow.to_deployment(name="swimming", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        vo2max_flow.to_deployment(name="vo2max", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        walking_flow.to_deployment(name="walking", schedule=IntervalSchedule(interval=timedelta(hours=1))),
-        location_flow.to_deployment(name="location", schedule=IntervalSchedule(interval=timedelta(minutes=30))),
+        blood_pressure_flow.to_deployment(name="blood-pressure", interval=timedelta(hours=1)),
+        cycling_flow.to_deployment(name="cycling", interval=timedelta(hours=1)),
+        heart_rate_flow.to_deployment(name="heart-rate", interval=timedelta(hours=1)),
+        oxygen_flow.to_deployment(name="oxygen", interval=timedelta(hours=1)),
+        running_flow.to_deployment(name="running", interval=timedelta(hours=1)),
+        shootaround_flow.to_deployment(name="shootaround", interval=timedelta(hours=1)),
+        sleep_flow.to_deployment(name="sleep", interval=timedelta(hours=1)),
+        steps_flow.to_deployment(name="steps", interval=timedelta(hours=1)),
+        swimming_flow.to_deployment(name="swimming", interval=timedelta(hours=1)),
+        vo2max_flow.to_deployment(name="vo2max", interval=timedelta(hours=1)),
+        walking_flow.to_deployment(name="walking", interval=timedelta(hours=1)),
+        location_flow.to_deployment(name="location", interval=timedelta(minutes=30)),
     ]
     
     # Serve all deployments concurrently in a single headless daemon process
