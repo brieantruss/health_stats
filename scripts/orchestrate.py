@@ -85,22 +85,32 @@ def location_flow():
     # 4. Fetch Weather Data (dependent on locations table being loaded)
     run_etl_step("extract_and_load_weather.py")
 
+# Unified hourly flow that runs all 11 standard flows sequentially (one-by-one)
+@flow(name="hs_hourly_etl")
+def hourly_etl_flow():
+    """
+    Sequentially runs all 11 standard ETL tasks to minimize memory footprint and CPU spikes on the e2-micro VM.
+    """
+    print("Starting sequential hourly ETL pipeline...")
+    blood_pressure_flow()
+    cycling_flow()
+    heart_rate_flow()
+    oxygen_flow()
+    running_flow()
+    shootaround_flow()
+    sleep_flow()
+    steps_flow()
+    swimming_flow()
+    vo2max_flow()
+    walking_flow()
+    print("Sequential hourly ETL pipeline completed successfully!")
+
 if __name__ == "__main__":
     print("Starting Prefect Orchestration Daemon...")
     
-    # Define deployments
+    # Define deployments (consolidated down to just two clean, staggered deployments)
     deployments = [
-        blood_pressure_flow.to_deployment(name="blood-pressure", interval=timedelta(hours=1)),
-        cycling_flow.to_deployment(name="cycling", interval=timedelta(hours=1)),
-        heart_rate_flow.to_deployment(name="heart-rate", interval=timedelta(hours=1)),
-        oxygen_flow.to_deployment(name="oxygen", interval=timedelta(hours=1)),
-        running_flow.to_deployment(name="running", interval=timedelta(hours=1)),
-        shootaround_flow.to_deployment(name="shootaround", interval=timedelta(hours=1)),
-        sleep_flow.to_deployment(name="sleep", interval=timedelta(hours=1)),
-        steps_flow.to_deployment(name="steps", interval=timedelta(hours=1)),
-        swimming_flow.to_deployment(name="swimming", interval=timedelta(hours=1)),
-        vo2max_flow.to_deployment(name="vo2max", interval=timedelta(hours=1)),
-        walking_flow.to_deployment(name="walking", interval=timedelta(hours=1)),
+        hourly_etl_flow.to_deployment(name="hourly-etl", interval=timedelta(hours=1)),
         location_flow.to_deployment(name="location", interval=timedelta(minutes=30)),
     ]
     
