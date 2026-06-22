@@ -1,0 +1,57 @@
+nohup: ignoring input
+ * Serving Flask app 'api_app'
+ * Debug mode: off
+2025-07-12 07:27:59,443 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://192.168.0.110:5001
+2025-07-12 07:27:59,443 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-12 07:28:13,118 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 07:28:13,123 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 07:28:13,126 - INFO - 192.168.0.110 - - [12/Jul/2025 07:28:13] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 07:28:13,147 - INFO - 192.168.0.110 - - [12/Jul/2025 07:28:13] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 07:28:59,444 - INFO - 192.168.0.110 - - [12/Jul/2025 07:28:59] "[35m[1mPOST /diet HTTP/1.1[0m" 201 -
+2025-07-12 07:28:59,514 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 07:28:59,518 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 07:28:59,520 - INFO - 192.168.0.110 - - [12/Jul/2025 07:28:59] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 07:28:59,539 - INFO - 192.168.0.110 - - [12/Jul/2025 07:28:59] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 07:29:06,611 - INFO - 192.168.0.110 - - [12/Jul/2025 07:29:06] "[35m[1mPOST /diet HTTP/1.1[0m" 201 -
+2025-07-12 07:29:06,680 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 07:29:06,687 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 07:29:06,689 - INFO - 192.168.0.110 - - [12/Jul/2025 07:29:06] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 07:29:06,708 - INFO - 192.168.0.110 - - [12/Jul/2025 07:29:06] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 07:29:59,340 - INFO - 192.168.0.110 - - [12/Jul/2025 07:29:59] "[35m[1mPOST /diet HTTP/1.1[0m" 201 -
+2025-07-12 07:29:59,409 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 07:29:59,414 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 07:29:59,416 - INFO - 192.168.0.110 - - [12/Jul/2025 07:29:59] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 07:29:59,433 - INFO - 192.168.0.110 - - [12/Jul/2025 07:29:59] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 07:46:44,523 - INFO - 192.168.0.110 - - [12/Jul/2025 07:46:44] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 07:50:18,097 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 07:50:18,102 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 07:50:18,104 - INFO - 192.168.0.110 - - [12/Jul/2025 07:50:18] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 07:50:18,123 - INFO - 192.168.0.110 - - [12/Jul/2025 07:50:18] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 07:54:55,671 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 07:54:55,675 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 07:54:55,677 - INFO - 192.168.0.110 - - [12/Jul/2025 07:54:55] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 07:54:55,697 - INFO - 192.168.0.110 - - [12/Jul/2025 07:54:55] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 08:00:36,021 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 08:00:36,025 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 08:00:36,027 - INFO - 192.168.0.110 - - [12/Jul/2025 08:00:36] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 08:00:36,047 - INFO - 192.168.0.110 - - [12/Jul/2025 08:00:36] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 08:02:02,820 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 08:02:02,825 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 08:02:02,827 - INFO - 192.168.0.110 - - [12/Jul/2025 08:02:02] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 08:02:02,847 - INFO - 192.168.0.110 - - [12/Jul/2025 08:02:02] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 08:03:38,438 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 08:03:38,442 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 08:03:38,444 - INFO - 192.168.0.110 - - [12/Jul/2025 08:03:38] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 08:03:38,465 - INFO - 192.168.0.110 - - [12/Jul/2025 08:03:38] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 08:05:38,134 - INFO - 192.168.0.110 - - [12/Jul/2025 08:05:38] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 08:07:08,097 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 08:07:08,101 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 08:07:08,103 - INFO - 192.168.0.110 - - [12/Jul/2025 08:07:08] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 08:07:08,124 - INFO - 192.168.0.110 - - [12/Jul/2025 08:07:08] "GET /exercises HTTP/1.1" 200 -
+2025-07-12 08:08:53,741 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-12 08:08:53,745 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-12 08:08:53,747 - INFO - 192.168.0.110 - - [12/Jul/2025 08:08:53] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-12 08:08:53,770 - INFO - 192.168.0.110 - - [12/Jul/2025 08:08:53] "GET /exercises HTTP/1.1" 200 -

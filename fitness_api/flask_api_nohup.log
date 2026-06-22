@@ -1,0 +1,17 @@
+nohup: ignoring input
+ * Serving Flask app 'api_app'
+ * Debug mode: off
+2025-07-11 16:11:16,494 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://192.168.0.110:5001
+2025-07-11 16:11:16,494 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-11 16:11:32,725 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-11 16:11:32,730 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-11 16:11:32,732 - INFO - 192.168.0.110 - - [11/Jul/2025 16:11:32] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-11 16:11:32,752 - INFO - 192.168.0.110 - - [11/Jul/2025 16:11:32] "GET /exercises HTTP/1.1" 200 -
+2025-07-11 16:13:10,146 - INFO - 192.168.0.110 - - [11/Jul/2025 16:13:10] "[35m[1mPOST /diet HTTP/1.1[0m" 201 -
+2025-07-11 16:13:10,216 - INFO - Executing query: SELECT main_food_description FROM main_food_descriptions ORDER BY main_food_description ASC
+2025-07-11 16:13:10,220 - INFO - Successfully fetched 5432 food descriptions.
+2025-07-11 16:13:10,222 - INFO - 192.168.0.110 - - [11/Jul/2025 16:13:10] "GET /food_descriptions HTTP/1.1" 200 -
+2025-07-11 16:13:10,240 - INFO - 192.168.0.110 - - [11/Jul/2025 16:13:10] "GET /exercises HTTP/1.1" 200 -
