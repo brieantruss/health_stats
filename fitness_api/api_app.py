@@ -4,7 +4,7 @@ print(f"Query defined: SELECT ingredient_description FROM food_ingredients ORDER
 # ~/fitness_api/api_app.py
 
 from flask import Flask, request, jsonify
-from flask_mysqldb import MySQL
+import mysql.connector
 from datetime import datetime
 import logging # Import logging module
 import os
@@ -14,13 +14,14 @@ app = Flask(__name__)
 # Configure logging to show more details
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# MySQL Configurations (supports environment variables for secure/flexible deployment)
-app.config['MYSQL_HOST'] = os.environ.get('MYSQL_HOST', 'localhost')
-app.config['MYSQL_USER'] = os.environ.get('MYSQL_USER', 'modulo')
-app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD', 'modulo')
-app.config['MYSQL_DB'] = os.environ.get('MYSQL_DB', 'health_stats')
-
-mysql = MySQL(app)
+# Database connection helper
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.environ.get('MYSQL_HOST', 'localhost'),
+        user=os.environ.get('MYSQL_USER', 'modulo'),
+        password=os.environ.get('MYSQL_PASSWORD', 'modulo'),
+        database=os.environ.get('MYSQL_DB', 'health_stats')
+    )
 
 # Allowed exercises for input validation (existing)
 ALLOWED_EXERCISES = [
@@ -85,11 +86,14 @@ def get_exercises():
     Retrieves all exercises from the database.
     Can be filtered by exercise type: /exercises?exercise=push_ups
     """
-    cursor = mysql.connection.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
     exercise_filter = request.args.get('exercise')
 
     if exercise_filter:
         if exercise_filter not in ALLOWED_EXERCISES:
+            cursor.close()
+            conn.close()
             return jsonify({"error": f"Invalid exercise type. Allowed are: {', '.join(ALLOWED_EXERCISES)}"}), 400
         query = "SELECT id, exercise, record_date, reps, duration, resistance_kg FROM exercises WHERE exercise = %s ORDER BY record_date DESC, id DESC"
         cursor.execute(query, (exercise_filter,))
@@ -108,6 +112,7 @@ def get_exercises():
             'resistance_kg': float(row[5]) if row[5] is not None else None
         })
     cursor.close()
+    conn.close()
     return jsonify(data)
 
 @app.route('/exercises', methods=['POST'])
@@ -153,31 +158,41 @@ def add_exercise():
     if resistance_kg is not None and not (isinstance(resistance_kg, (float, int)) and resistance_kg >= 0):
         return jsonify({"error": "Resistance_kg must be a non-negative decimal"}), 400
 
+    conn = None
+    cursor = None
     try:
-        cursor = mysql.connection.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
         query = """
             INSERT INTO exercises (exercise, record_date, reps, duration, resistance_kg)
             VALUES (%s, %s, %s, %s, %s)
         """
         cursor.execute(query, (exercise, record_date, reps, duration, resistance_kg))
-        mysql.connection.commit()
+        conn.commit()
         new_id = cursor.lastrowid
-        cursor.close()
         return jsonify({"message": "Exercise added successfully", "id": new_id}), 201
     except Exception as e:
-        mysql.connection.rollback() # Rollback in case of error
+        if conn:
+            conn.rollback() # Rollback in case of error
         return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/exercises/<int:exercise_id>', methods=['DELETE'])
 def delete_exercise(exercise_id):
     """
     Deletes an exercise record by ID.
     """
-    cursor = mysql.connection.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
     cursor.execute("DELETE FROM exercises WHERE id = %s", (exercise_id,))
-    mysql.connection.commit()
+    conn.commit()
     rows_affected = cursor.rowcount
     cursor.close()
+    conn.close()
 
     if rows_affected == 0:
         return jsonify({"message": "No exercise found with that ID"}), 404
@@ -190,9 +205,11 @@ def get_food_descriptions():
     """
     Retrieves all food descriptions from the food_ingredients table.
     """
+    conn = None
     cursor = None # Initialize cursor to None
     try:
-        cursor = mysql.connection.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
         # Corrected column name to 'main_food_description'
         query = "SELECT distinct ingredient_description FROM food_ingredients ORDER BY ingredient_description ASC"
         logging.info(f"Executing query: {query}") # Log the query
@@ -206,6 +223,8 @@ def get_food_descriptions():
     finally:
         if cursor: # Ensure cursor is closed even if an error occurs
             cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/diet', methods=['POST'])
 def add_diet_record():
@@ -230,11 +249,16 @@ def add_diet_record():
     except ValueError:
         return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
 
+    conn = None
+    cursor = None
     try:
-        cursor = mysql.connection.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
         # Optional: Validate if the item exists in food_ingredients
         cursor.execute("SELECT COUNT(*) FROM food_ingredients WHERE ingredient_description = %s", (item,))
         if cursor.fetchone()[0] == 0:
+            cursor.close()
+            conn.close()
             return jsonify({"error": f"Invalid food item: '{item}'. Please select from available descriptions."}), 400
 
         query = """
@@ -242,13 +266,18 @@ def add_diet_record():
             VALUES (%s, %s)
         """
         cursor.execute(query, (item, record_date))
-        mysql.connection.commit()
+        conn.commit()
         new_id = cursor.lastrowid
-        cursor.close()
         return jsonify({"message": "Diet record added successfully", "id": new_id}), 201
     except Exception as e:
-        mysql.connection.rollback()
+        if conn:
+            conn.rollback()
         return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     # Run on all available network interfaces on port 5000
