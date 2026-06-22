@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve Fitness API
+After=network.target mysql.service
+
+[Service]
+User=briean
+WorkingDirectory=/home/briean/health_stats/fitness_api
+ExecStart=/usr/bin/gunicorn --workers 1 --bind 0.0.0.0:5001 api_app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

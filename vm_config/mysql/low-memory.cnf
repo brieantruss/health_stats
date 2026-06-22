@@ -1,0 +1,28 @@
+# MySQL Optimization Config for 1GB RAM e2-micro VM
+# Save as /etc/mysql/conf.d/low-memory.cnf
+
+[mysqld]
+# Disable Performance Schema to save ~150MB-200MB of RAM
+performance_schema = 0
+
+# Limit InnoDB Buffer Pool (stores index/table data in memory)
+# 64MB is plenty for low-traffic health/fitness stats database
+innodb_buffer_pool_size = 64M
+
+# Limit key buffer for MyISAM tables (since InnoDB is primary)
+key_buffer_size = 8M
+
+# Limit connections to prevent memory exhaustion from thread allocation
+max_connections = 10
+thread_cache_size = 2
+
+# Limit query cache and temporary table size to reduce memory footprint
+tmp_table_size = 16M
+max_heap_table_size = 16M
+
+# Low-overhead log buffers
+innodb_log_buffer_size = 8M
+join_buffer_size = 256K
+read_buffer_size = 256K
+read_rnd_buffer_size = 512K
+sort_buffer_size = 512K
