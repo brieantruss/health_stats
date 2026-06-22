@@ -4,7 +4,7 @@ After=network.target mysql.service
 
 [Service]
 Type=simple
-User=briean
+User=root
 WorkingDirectory=/home/briean/health_stats
 ExecStart=/usr/local/bin/prefect server start --host 0.0.0.0 --port 4200
 Restart=always
