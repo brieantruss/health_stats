@@ -81,12 +81,16 @@ If you cannot use the link, navigate manually using the sidebar inside the Googl
 
 ---
 
-### Step 3B: Connect to your VM and Clone Code
+### Step 3B: Connect to your VM, Install Packages, and Clone Code
 1. Open your computer's terminal and SSH into your VM:
    ```bash
    gcloud compute ssh health-stats-vm --zone=us-central1-a
    ```
-2. Clone your GitHub repository onto the VM and move into it:
+2. Run system package updates and install necessary system-level dependencies (including MySQL Server, Python3, Pip, and Gunicorn):
+   ```bash
+   sudo apt update && sudo apt install -y mysql-server python3-pip python3-venv gunicorn
+   ```
+3. Clone your GitHub repository onto the VM and move into it:
    ```bash
    git clone <YOUR_GITHUB_REPO_URL> health_stats
    cd health_stats
@@ -106,8 +110,13 @@ sudo systemctl restart mysql
 
 ---
 
-### Step 3D: Activate Gunicorn and Prefect systemd Services
-Copy the service files, reload systemd, and turn on the active services so they run automatically:
+### Step 3D: Install Python Packages, and Activate Gunicorn and Prefect systemd Services
+Install Python-level package requirements first, then copy the service files, reload systemd, and turn on the active services so they run automatically:
+```bash
+# Install Python dependencies globally on the VM
+sudo pip3 install -r requirements.txt prefect gunicorn flask flask-mysqldb mysql-connector-python
+
+# Copy systemd service files to systemd directory
 ```bash
 # Copy systemd service files to systemd directory
 sudo cp vm_config/systemd/*.service /etc/systemd/system/
