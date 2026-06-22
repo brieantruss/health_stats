@@ -3,7 +3,7 @@ import sys
 import subprocess
 from datetime import timedelta
 from prefect import flow, task
-from prefect.schedules import IntervalSchedule
+from prefect.client.schemas.schedules import IntervalSchedule
 
 # Base directory for the repository
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
