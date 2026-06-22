@@ -86,9 +86,9 @@ If you cannot use the link, navigate manually using the sidebar inside the Googl
    ```bash
    gcloud compute ssh health-stats-vm --zone=us-central1-a
    ```
-2. Run system package updates and install remaining system-level dependencies (including Python3, Pip, and Gunicorn):
+2. Run system package updates and install necessary system-level dependencies (including MySQL Server, Python3, Pip, and Gunicorn):
    ```bash
-   sudo apt update && sudo apt install -y python3-pip python3-venv gunicorn
+   sudo apt update && sudo apt install -y mysql-server python3-pip python3-venv gunicorn
    ```
 3. Clone your GitHub repository onto the VM and move into it:
    ```bash
@@ -125,7 +125,7 @@ sudo cp vm_config/systemd/*.service /etc/systemd/system/
 sudo systemctl daemon-reload
 
 # Enable services to run at boot, and start them immediately
-sudo systemctl enable --now prefect-daemon fitness-api gps-logger-api
+sudo systemctl enable --now prefect-server prefect-daemon fitness-api gps-logger-api
 ```
 
 ---
