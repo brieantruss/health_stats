@@ -95,6 +95,7 @@ def sync_mysql_to_bigquery():
                 # Get column headers
                 cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
                 columns = [col[0] for col in cursor.description]
+                cursor.fetchall()  # Cleanly read the empty result set to clear the cursor
                 
                 # Fetch and stream rows directly to a local CSV in chunks to keep memory usage < 5MB
                 logging.info(f"Fetching rows and streaming to local temporary file: {temp_csv_path}")
