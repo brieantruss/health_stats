@@ -1,6 +1,6 @@
 # Health Stats: Personal Health & Fitness Data Pipeline & Cloud Orchestration
 
-Health Stats is an automated data pipeline that ingests, cleans, and consolidates personal fitness, sleep, vitals, and location data from multiple sources (like a Galaxy Smart Watch and phone GPS loggers) into a single database. 
+Health Stats is an automated data platform that ingests, cleans, and consolidates personal fitness, sleep, vitals, and location data from multiple sources (including Galaxy Smart Watch, mobile phone GPS logging, and a custom-built workout tracking API) into a single database and visualizes the results for tracking and analysis. 
 
 Originally built manually and running on a local Raspberry Pi cluster, this system was agentically migrated and optimized to run on the GCP Always Free Tier (using an e2-micro VM and serverless Cloud Run) for $0/month.
 
@@ -12,10 +12,6 @@ Originally built manually and running on a local Raspberry Pi cluster, this syst
 ## AI Collaboration Notice
 
 I migrated, debugged, and optimized this cloud setup in collaboration with an AI coding partner (Cline running Claude 3.5 Sonnet). Together, we worked through several real-world engineering constraints: diagnosing kernel Out-Of-Memory (OOM) crashes via GCP serial logs, refactoring the Python API layer, resolving SQLite database locks, and designing a lightweight, sequential execution pipeline. 
-
-Most recently, we ditched third-party Fivetran connectors in favor of a native, 100% free Python BigQuery sync pipeline that streams multi-million row MySQL tables in chunks of 10,000 rows to keep memory usage under 5MB at all times—fully automating our data warehouse loads via an hourly Linux cron job!
-
-It's a great example of how a developer and an AI assistant can cooperatively build and harden a complete, low-cost cloud system.
 
 ---
 
