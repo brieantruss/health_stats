@@ -70,6 +70,18 @@ def get_bigquery_client():
 def sync_mysql_to_bigquery():
     logging.info("Starting MySQL to BigQuery synchronization...")
     
+    # Determine tables to sync (allow optional command-line filtering)
+    tables_to_sync = TABLES_TO_SYNC
+    if len(sys.argv) > 1:
+        requested_tables = [arg.strip() for arg in sys.argv[1:] if arg.strip()]
+        if requested_tables:
+            # Filter only valid tables from our list
+            tables_to_sync = [t for t in TABLES_TO_SYNC if t in requested_tables]
+            if not tables_to_sync:
+                logging.error(f"None of the requested tables {sys.argv[1:]} are valid tables to sync.")
+                sys.exit(1)
+            logging.info(f"Targeting specific tables for sync: {tables_to_sync}")
+
     # 1. Initialize clients
     try:
         bq_client = get_bigquery_client()
