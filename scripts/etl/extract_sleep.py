@@ -7,7 +7,10 @@ import sys # Import sys module
 # --- Google Drive Configuration ---
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
 # SERVICE_ACCOUNT_FILE will be passed as a command-line argument
-DRIVE_FOLDER_ID = '1Tw9VdoGfLz0eRQc44GycxTylnAo8JoF-'  # Your Google Drive folder ID
+DRIVE_FOLDER_IDS = [
+    '1Tw9VdoGfLz0eRQc44GycxTylnAo8JoF-',  # Original Google Drive folder ID
+    '122phx23TZI52gKoJDoT28zuaR5Ah9Bpm'   # New Google Drive folder ID
+]
 
 # --- Local Save Path Configuration ---
 # LOCAL_SAVE_PATH will be passed as a command-line argument
@@ -33,31 +36,34 @@ def move_files_local(service_account_file, local_save_path):
     # Ensure the local save directory exists
     os.makedirs(local_save_path, exist_ok=True)
 
-    # Get list of files in the Google Drive folder
-    page_token = None
-    all_items = []
-    while True:
-        try:
-            results = drive_service.files().list(
-                q=f"'{DRIVE_FOLDER_ID}' in parents",
-                fields="nextPageToken, files(id, name, modifiedTime)",  # Include modifiedTime
-                pageToken=page_token
-            ).execute()
-            items = results.get('files', [])
-            all_items.extend(items)  # Add the retrieved items to the list
-            page_token = results.get('nextPageToken', None)
-            if page_token is None:
-                break  # No more pages
-        except Exception as e:
-            print(f"Error listing files from Google Drive: {e}")
-            break # Exit loop on error
-
     filename_pattern = re.compile(r"Sleep \d{4}\.\d{2}\.\d{2}( \d{2}\:\d{2}:\d{2})? Samsung Health\.csv")
     files_downloaded = False
 
-    if not all_items:
-        print('No files found in the Google Drive folder.')
-    else:
+    # Iterate over all configured Google Drive folders to download sleep CSVs
+    for folder_id in DRIVE_FOLDER_IDS:
+        print(f"Checking Google Drive folder: {folder_id}")
+        page_token = None
+        all_items = []
+        while True:
+            try:
+                results = drive_service.files().list(
+                    q=f"'{folder_id}' in parents",
+                    fields="nextPageToken, files(id, name, modifiedTime)",  # Include modifiedTime
+                    pageToken=page_token
+                ).execute()
+                items = results.get('files', [])
+                all_items.extend(items)  # Add the retrieved items to the list
+                page_token = results.get('nextPageToken', None)
+                if page_token is None:
+                    break  # No more pages
+            except Exception as e:
+                print(f"Error listing files from Google Drive folder {folder_id}: {e}")
+                break # Exit loop on error
+
+        if not all_items:
+            print(f'No files found in Google Drive folder {folder_id}.')
+            continue
+
         for item in all_items:
             file_name = item['name']
             file_modified_time = item['modifiedTime']
