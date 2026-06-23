@@ -158,7 +158,7 @@ def sync_mysql_to_bigquery():
                 logging.info(f"Streaming write complete. Total rows exported: {row_count}")
                 
                 # Define BigQuery target table
-                bq_table_id = f"mysql_{table_name}"
+                bq_table_id = table_name
                 table_ref = bq_client.dataset(DATASET_ID).table(bq_table_id)
                 
                 # Generate explicit full schema mapping to prevent parser conflicts
