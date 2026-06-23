@@ -3,8 +3,8 @@ import os
 import sys
 import datetime
 import logging
+import csv
 import mysql.connector
-import pandas as pd
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
@@ -86,52 +86,79 @@ def sync_mysql_to_bigquery():
     # 2. Sync each table
     try:
         for table_name in TABLES_TO_SYNC:
-            logging.info(f"Syncing table '{table_name}'...")
+            logging.info(f"--- Syncing table '{table_name}' ---")
             
-            # Fetch data from MySQL
+            temp_csv_path = f"/tmp/mysql_{table_name}.csv"
             cursor = mysql_conn.cursor()
+            
             try:
-                cursor.execute(f"SELECT * FROM {table_name}")
+                # Get column headers
+                cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
                 columns = [col[0] for col in cursor.description]
-                rows = cursor.fetchall()
+                
+                # Fetch and stream rows directly to a local CSV in chunks to keep memory usage < 5MB
+                logging.info(f"Fetching rows and streaming to local temporary file: {temp_csv_path}")
+                with open(temp_csv_path, 'w', newline='', encoding='utf-8') as csv_file:
+                    writer = csv.writer(csv_file)
+                    writer.writerow(columns)  # Write header
+                    
+                    cursor.execute(f"SELECT * FROM {table_name}")
+                    row_count = 0
+                    while True:
+                        rows = cursor.fetchmany(10000)
+                        if not rows:
+                            break
+                        
+                        # Process and format rows for BigQuery compatibility on-the-fly
+                        formatted_rows = []
+                        for row in rows:
+                            formatted_row = []
+                            for item in row:
+                                if isinstance(item, (datetime.datetime, datetime.date)):
+                                    formatted_row.append(item.isoformat())
+                                elif isinstance(item, datetime.timedelta):
+                                    formatted_row.append(str(item).split()[-1])  # Format cleanly as HH:MM:SS
+                                else:
+                                    formatted_row.append(item)
+                            formatted_rows.append(formatted_row)
+                            
+                        writer.writerows(formatted_rows)
+                        row_count += len(rows)
+                        logging.info(f"Buffered and wrote {row_count} rows...")
+                        
+                logging.info(f"Streaming write complete. Total rows exported: {row_count}")
+                
+                # Define BigQuery target table
+                bq_table_id = f"mysql_{table_name}"
+                table_ref = bq_client.dataset(DATASET_ID).table(bq_table_id)
+                
+                # Configure load job
+                # WRITE_TRUNCATE ensures the table is cleanly overwritten with the latest state
+                # autodetect=True allows BigQuery to automatically discover and map types
+                job_config = bigquery.LoadJobConfig(
+                    source_format=bigquery.SourceFormat.CSV,
+                    skip_leading_rows=1,
+                    write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+                    autodetect=True
+                )
+                
+                # Upload directly from file (highly memory efficient!)
+                logging.info(f"Uploading file stream to BigQuery: {PROJECT_ID}.{DATASET_ID}.{bq_table_id}")
+                with open(temp_csv_path, "rb") as source_file:
+                    job = bq_client.load_table_from_file(source_file, table_ref, job_config=job_config)
+                    job.result()  # Wait for the load job to complete
+                    
+                logging.info(f"Successfully synced table '{table_name}' to BigQuery!")
+                
             except Exception as e:
-                logging.error(f"Failed to query MySQL table '{table_name}': {e}")
-                continue
+                logging.error(f"Failed to sync table '{table_name}': {e}")
+                
             finally:
                 cursor.close()
-                
-            # Load into Pandas DataFrame
-            df = pd.DataFrame(rows, columns=columns)
-            logging.info(f"Table '{table_name}' loaded from MySQL: {len(df)} rows.")
-            
-            # Convert datetime and timedelta columns to strings
-            # to prevent formatting and pyarrow serialization issues during BigQuery load
-            for col in df.columns:
-                if pd.api.types.is_datetime64_any_dtype(df[col]):
-                    df[col] = df[col].apply(lambda x: x.isoformat() if pd.notna(x) else None)
-                elif pd.api.types.is_timedelta64_dtype(df[col]):
-                    df[col] = df[col].apply(lambda x: str(x).split()[-1] if pd.notna(x) else None)
-                elif len(df) > 0 and isinstance(df[col].iloc[0], (datetime.datetime, datetime.date)):
-                    df[col] = df[col].apply(lambda x: x.isoformat() if pd.notna(x) else None)
-            
-            # Define BigQuery target table
-            bq_table_id = f"mysql_{table_name}"
-            table_ref = bq_client.dataset(DATASET_ID).table(bq_table_id)
-            
-            # Configure load job (WRITE_TRUNCATE ensures the table is cleanly overwritten)
-            job_config = bigquery.LoadJobConfig(
-                write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
-            )
-            
-            # Upload to BigQuery
-            try:
-                logging.info(f"Uploading '{table_name}' to BigQuery dataset '{DATASET_ID}' as '{bq_table_id}'...")
-                job = bq_client.load_table_from_dataframe(df, table_ref, job_config=job_config)
-                job.result()  # Wait for the load job to complete
-                logging.info(f"Successfully synced table '{table_name}' to BigQuery!")
-            except Exception as e:
-                logging.error(f"Failed to load table '{table_name}' to BigQuery: {e}")
-                
+                # Clean up temporary CSV file from disk
+                if os.path.exists(temp_csv_path):
+                    os.remove(temp_csv_path)
+                    
     finally:
         mysql_conn.close()
         logging.info("MySQL connection closed.")
