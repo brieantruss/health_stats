@@ -53,6 +53,22 @@ TABLES_TO_SYNC = [
     "weather"
 ]
 
+def get_bigquery_type(col_name):
+    """
+    Returns the appropriate BigQuery data type based on the column name
+    to prevent parser conflicts on fields with mixed formatting.
+    """
+    col_lower = col_name.lower()
+    # Map key numerical metrics to integers
+    if col_lower in ["steps", "heart_rate", "bp_systolic", "bp_diastolic", "oxygen_saturation", "swimming_laps", "vo2max", "count"]:
+        return "INTEGER"
+    # Map GPS coordinates and weather metrics to floats
+    elif col_lower in ["latitude", "longitude", "altitude", "speed", "pace", "distance", "temperature", "humidity"]:
+        return "FLOAT"
+    # Fallback to string for dates, times, updates, and text details
+    else:
+        return "STRING"
+
 def get_bigquery_client():
     """
     Initializes and returns a BigQuery client.
@@ -145,21 +161,19 @@ def sync_mysql_to_bigquery():
                 bq_table_id = f"mysql_{table_name}"
                 table_ref = bq_client.dataset(DATASET_ID).table(bq_table_id)
                 
-                # Define schema overrides for columns that have mixed types to prevent BigQuery parsing errors
-                schema_overrides = []
+                # Generate explicit full schema mapping to prevent parser conflicts
+                full_schema = []
                 for col in columns:
-                    if col.lower() in ["time", "date", "last_updated", "heart_rate"]:
-                        schema_overrides.append(bigquery.SchemaField(col, "STRING"))
+                    field_type = get_bigquery_type(col)
+                    full_schema.append(bigquery.SchemaField(col, field_type))
                 
-                # Configure load job
-                # WRITE_TRUNCATE ensures the table is cleanly overwritten with the latest state
-                # autodetect=True allows BigQuery to automatically discover and map types
+                # Configure load job (explicit schema guarantees parsing success!)
                 job_config = bigquery.LoadJobConfig(
                     source_format=bigquery.SourceFormat.CSV,
                     skip_leading_rows=1,
                     write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-                    schema=schema_overrides if schema_overrides else None,
-                    autodetect=True if not schema_overrides else False
+                    schema=full_schema,
+                    autodetect=False
                 )
                 
                 # Upload directly from file (highly memory efficient!)
