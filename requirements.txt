@@ -12,3 +12,8 @@ google-auth-oauthlib
 
 # Database Connectivity (MySQL)
 mysql-connector-python
+
+# Google BigQuery Integration
+google-cloud-bigquery
+pandas-gbq
+db-dtypes
