@@ -1,12 +1,11 @@
-# HealthHub: Personal Fitness Data Pipeline & Cloud Orchestration
+# Health Stats: Personal Health & Fitness Data Pipeline & Cloud Orchestration
 
-HealthHub is an automated data pipeline that ingests, cleans, and consolidates personal fitness, sleep, vitals, and location data from multiple sources (like a Galaxy Smart Watch and phone GPS loggers) into a single database. 
+Health Stats is an automated data pipeline that ingests, cleans, and consolidates personal fitness, sleep, vitals, and location data from multiple sources (like a Galaxy Smart Watch and phone GPS loggers) into a single database. 
 
-Originally running on a local Raspberry Pi cluster, this system was migrated and optimized to run on the GCP Always Free Tier (using an e2-micro VM and serverless Cloud Run) for $0/month.
+Originally built manually and running on a local Raspberry Pi cluster, this system was agentically migrated and optimized to run on the GCP Always Free Tier (using an e2-micro VM and serverless Cloud Run) for $0/month.
 
 *   **Looker Studio Dashboard**: [Access Live Reporting](https://datastudio.google.com/reporting/4d204527-a6ef-4860-b02c-73bf58cd1377)
 *   **Self-Hosted Prefect UI**: `http://146.148.87.26:4200`
-*   **Serverless Streamlit UI**: [Log Workouts Live](https://fitness-streamlit-ui-94214537108.us-central1.run.app)
 
 ---
 
