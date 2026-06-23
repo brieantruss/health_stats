@@ -49,24 +49,24 @@ It's a great example of how a developer and an AI assistant can cooperatively bu
 
 | MySQL Source Table | Target BigQuery Table | Sync Pattern | Data Domain / Description |
 | :--- | :--- | :--- | :--- |
-| `blood_pressure` | `health_stats.mysql_blood_pressure` | Overwrite | Daily blood pressure (systolic/diastolic) vitals |
-| `cycling` | `health_stats.mysql_cycling` | Overwrite | High-frequency GPS & speed telemetry from cycling |
-| `cycling_summary` | `health_stats.mysql_cycling_summary` | Overwrite | Aggregate metrics per cycling workout session |
-| `diet` | `health_stats.mysql_diet` | Overwrite | Daily food intake logs synced from Streamlit/MyFitnessPal |
-| `exercises` | `health_stats.mysql_exercises` | Overwrite | Custom strength and cardio exercise definitions |
-| `food_descriptions` | `health_stats.mysql_food_descriptions` | Overwrite | Calorie & macronutrient density data per food item |
-| `food_ingredients` | `health_stats.mysql_food_ingredients` | Overwrite | Recipe ingredient mappings and custom logged meals |
-| `heart_rate` | `health_stats.mysql_heart_rate` | Overwrite | Continuous second-by-second heart rate tracking |
-| `locations` | `health_stats.mysql_locations` | Overwrite | Spatial latitude/longitude coordinates from watch GPS |
-| `oxygen` | `health_stats.mysql_oxygen` | Overwrite | Blood oxygen saturation (SpO2) vitals tracking |
-| `running` | `health_stats.mysql_running` | Overwrite | Granular running metrics and interval pace telemetry |
-| `shootaround` | `health_stats.mysql_shootaround` | Overwrite | Basketball session times, active minutes, and logs |
-| `sleep` | `health_stats.mysql_sleep` | Overwrite | Granular sleep stages (deep, light, REM, awake) |
-| `steps` | `health_stats.mysql_steps` | Overwrite | Daily and hourly steps accumulated |
-| `swimming` | `health_stats.mysql_swimming` | Overwrite | Ingested lap counts, stroke rates, and swim telemetry |
-| `vo2max` | `health_stats.mysql_vo2max` | Overwrite | Cardiovascular fitness (VO2 Max) trends |
-| `walking` | `health_stats.mysql_walking` | Overwrite | Step length, symmetry, and speed telemetry |
-| `weather` | `health_stats.mysql_weather` | Overwrite | Weather conditions correlated hourly with location data |
+| `blood_pressure` | `health_stats.blood_pressure` | Overwrite | Daily blood pressure (systolic/diastolic) vitals |
+| `cycling` | `health_stats.cycling` | Overwrite | High-frequency GPS & speed telemetry from cycling |
+| `cycling_summary` | `health_stats.cycling_summary` | Overwrite | Aggregate metrics per cycling workout session |
+| `diet` | `health_stats.diet` | Overwrite | Daily food intake logs synced from Streamlit/MyFitnessPal |
+| `exercises` | `health_stats.exercises` | Overwrite | Custom strength and cardio exercise definitions |
+| `food_descriptions` | `health_stats.food_descriptions` | Overwrite | Calorie & macronutrient density data per food item |
+| `food_ingredients` | `health_stats.food_ingredients` | Overwrite | Recipe ingredient mappings and custom logged meals |
+| `heart_rate` | `health_stats.heart_rate` | Overwrite | Continuous second-by-second heart rate tracking |
+| `locations` | `health_stats.locations` | Overwrite | Spatial latitude/longitude coordinates from watch GPS |
+| `oxygen` | `health_stats.oxygen` | Overwrite | Blood oxygen saturation (SpO2) vitals tracking |
+| `running` | `health_stats.running` | Overwrite | Granular running metrics and interval pace telemetry |
+| `shootaround` | `health_stats.shootaround` | Overwrite | Basketball session times, active minutes, and logs |
+| `sleep` | `health_stats.sleep` | Overwrite | Granular sleep stages (deep, light, REM, awake) |
+| `steps` | `health_stats.steps` | Overwrite | Daily and hourly steps accumulated |
+| `swimming` | `health_stats.swimming` | Overwrite | Ingested lap counts, stroke rates, and swim telemetry |
+| `vo2max` | `health_stats.vo2max` | Overwrite | Cardiovascular fitness (VO2 Max) trends |
+| `walking` | `health_stats.walking` | Overwrite | Step length, symmetry, and speed telemetry |
+| `weather` | `health_stats.weather` | Overwrite | Weather conditions correlated hourly with location data |
 
 ---
 
