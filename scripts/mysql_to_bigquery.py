@@ -85,7 +85,7 @@ def sync_mysql_to_bigquery():
         
     # 2. Sync each table
     try:
-        for table_name in TABLES_TO_SYNC:
+        for table_name in tables_to_sync:
             logging.info(f"--- Syncing table '{table_name}' ---")
             
             temp_csv_path = f"/tmp/mysql_{table_name}.csv"
@@ -130,8 +130,14 @@ def sync_mysql_to_bigquery():
                 logging.info(f"Streaming write complete. Total rows exported: {row_count}")
                 
                 # Define BigQuery target table
-                bq_table_id = table_name
+                bq_table_id = f"mysql_{table_name}"
                 table_ref = bq_client.dataset(DATASET_ID).table(bq_table_id)
+                
+                # Define schema overrides for columns that have mixed types to prevent BigQuery parsing errors
+                schema_overrides = []
+                for col in columns:
+                    if col.lower() in ["time", "date", "last_updated", "heart_rate"]:
+                        schema_overrides.append(bigquery.SchemaField(col, "STRING"))
                 
                 # Configure load job
                 # WRITE_TRUNCATE ensures the table is cleanly overwritten with the latest state
@@ -140,7 +146,8 @@ def sync_mysql_to_bigquery():
                     source_format=bigquery.SourceFormat.CSV,
                     skip_leading_rows=1,
                     write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-                    autodetect=True
+                    schema=schema_overrides if schema_overrides else None,
+                    autodetect=True if not schema_overrides else False
                 )
                 
                 # Upload directly from file (highly memory efficient!)
