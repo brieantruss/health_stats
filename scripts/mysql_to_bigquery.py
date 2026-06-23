@@ -104,11 +104,14 @@ def sync_mysql_to_bigquery():
             df = pd.DataFrame(rows, columns=columns)
             logging.info(f"Table '{table_name}' loaded from MySQL: {len(df)} rows.")
             
-            # Convert datetime columns to strings or native Pandas datetimes if needed
-            # to prevent formatting issues during BigQuery load
+            # Convert datetime and timedelta columns to strings
+            # to prevent formatting and pyarrow serialization issues during BigQuery load
             for col in df.columns:
-                if pd.api.types.is_datetime64_any_dtype(df[col]) or isinstance(df[col].iloc[0], (datetime.datetime, datetime.date)) if len(df) > 0 else False:
-                    # Convert date/datetime objects to ISO string representation
+                if pd.api.types.is_datetime64_any_dtype(df[col]):
+                    df[col] = df[col].apply(lambda x: x.isoformat() if pd.notna(x) else None)
+                elif pd.api.types.is_timedelta64_dtype(df[col]):
+                    df[col] = df[col].apply(lambda x: str(x).split()[-1] if pd.notna(x) else None)
+                elif len(df) > 0 and isinstance(df[col].iloc[0], (datetime.datetime, datetime.date)):
                     df[col] = df[col].apply(lambda x: x.isoformat() if pd.notna(x) else None)
             
             # Define BigQuery target table
