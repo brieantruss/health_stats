@@ -1,8 +1,8 @@
 # Health Stats: Personal Health & Fitness Data Pipeline & Cloud Orchestration
 
-Health Stats is an automated data platform that ingests, cleans, and consolidates personal fitness, sleep, vitals, and location data from multiple sources (including Galaxy Smart Watch, mobile phone GPS logging, and a custom-built workout tracking API) into a single database and visualizes the results for tracking and analysis. 
+Health Stats is an automated data platform that ingests, cleans, and consolidates full historical personal fitness data from my [Samsung Galaxy Watch](https://www.samsung.com/us/watches/) (including daily steps, sleep, and vitals), location data from mobile phone GPS logging, and workout details from a custom-built exercise logging API into a single database and visualizes the results for tracking and analysis. 
 
-Originally built manually and running on a local Raspberry Pi cluster, this system was agentically migrated and optimized to run on the GCP Always Free Tier (using an e2-micro VM and serverless Cloud Run) for $0/month.
+Originally built manually and running on a local Raspberry Pi cluster, this system was agentically migrated and optimized to run on the GCP Always Free Tier (using an e2-micro VM and serverless Cloud Run) for $0/month. It was developed as a practical application project in preparation for successfully certifying as a [Google Cloud Platform Professional Data Engineer](https://cloud.google.com/learn/certification/data-engineer).
 
 *   **Looker Studio Dashboard**: [Access Live Reporting](https://datastudio.google.com/reporting/4d204527-a6ef-4860-b02c-73bf58cd1377)
 *   **Self-Hosted Prefect UI**: `http://146.148.87.26:4200`
