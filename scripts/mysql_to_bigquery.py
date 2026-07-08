@@ -8,6 +8,14 @@ import mysql.connector
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
+# MySQL configuration
+MYSQL_CONFIG = {
+    "host": "localhost",
+    "user": "modulo",
+    "password": "modulo",
+    "database": "health_stats"
+}
+
 # Configure logging
 LOG_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mysql_to_bigquery.log"))
 logging.basicConfig(
@@ -19,13 +27,37 @@ logging.basicConfig(
     ]
 )
 
-# MySQL configuration
-MYSQL_CONFIG = {
-    "host": "localhost",
-    "user": "modulo",
-    "password": "modulo",
-    "database": "health_stats"
-}
+class MySQLHandler(logging.Handler):
+    def __init__(self, mysql_config):
+        super().__init__()
+        self.mysql_config = mysql_config
+
+    def emit(self, record):
+        if record.name.startswith("mysql.connector"):
+            return
+        log_entry = self.format(record)
+        try:
+            import mysql.connector
+            conn = mysql.connector.connect(**self.mysql_config)
+            cursor = conn.cursor()
+            
+            # Truncate to fit securely in standard MySQL TEXT size safely
+            truncated_log = log_entry[:60000] if log_entry else ""
+            
+            cursor.execute(
+                "INSERT INTO pipeline_execution_logs (pipeline_name, level, message) VALUES (%s, %s, %s)",
+                ("mysql_to_bigquery", record.levelname, truncated_log)
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+db_handler = MySQLHandler(MYSQL_CONFIG)
+db_handler.setLevel(logging.INFO)
+db_handler.setFormatter(logging.Formatter('%(message)s'))
+logging.getLogger().addHandler(db_handler)
 
 # BigQuery configuration
 PROJECT_ID = "my-data-479716"
@@ -50,7 +82,9 @@ TABLES_TO_SYNC = [
     "swimming",
     "vo2max",
     "walking",
-    "weather"
+    "weather",
+    "drive_file_sync_history",
+    "pipeline_execution_logs"
 ]
 
 def get_bigquery_type(col_name):
@@ -60,7 +94,7 @@ def get_bigquery_type(col_name):
     """
     col_lower = col_name.lower()
     # Map key numerical metrics to integers
-    if col_lower in ["steps", "heart_rate", "bp_systolic", "bp_diastolic", "oxygen_saturation", "swimming_laps", "vo2max", "count"]:
+    if col_lower in ["steps", "heart_rate", "bp_systolic", "bp_diastolic", "oxygen_saturation", "swimming_laps", "vo2max", "count", "id"]:
         return "INTEGER"
     # Map GPS coordinates and weather metrics to floats
     elif col_lower in ["latitude", "longitude", "altitude", "speed", "pace", "distance", "temperature", "humidity"]:
@@ -173,7 +207,8 @@ def sync_mysql_to_bigquery():
                     skip_leading_rows=1,
                     write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
                     schema=full_schema,
-                    autodetect=False
+                    autodetect=False,
+                    allow_quoted_newlines=True
                 )
                 
                 # Upload directly from file (highly memory efficient!)
