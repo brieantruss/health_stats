@@ -306,6 +306,73 @@ def add_diet_record():
         if conn:
             conn.close()
 
+@app.route('/diet', methods=['GET'])
+def get_diet_records():
+    """
+    Retrieves diet records from the database.
+    Can be filtered by item: /diet?item=Banana
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        item_filter = request.args.get('item')
+
+        if item_filter and item_filter != 'All':
+            query = "SELECT id, item, date, grams, ml FROM diet WHERE item = %s ORDER BY date DESC, id DESC"
+            cursor.execute(query, (item_filter,))
+        else:
+            query = "SELECT id, item, date, grams, ml FROM diet ORDER BY date DESC, id DESC"
+            cursor.execute(query)
+
+        data = []
+        for row in cursor.fetchall():
+            data.append({
+                'id': row[0],
+                'item': row[1],
+                'record_date': row[2].strftime('%Y-%m-%d') if row[2] else None,
+                'grams': float(row[3]) if row[3] is not None else None,
+                'ml': float(row[4]) if row[4] is not None else None,
+            })
+        return jsonify(data)
+    except Exception as e:
+        logging.error(f"Error fetching diet records: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route('/diet/<int:diet_id>', methods=['DELETE'])
+def delete_diet_record(diet_id):
+    """
+    Deletes a diet record by ID.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM diet WHERE id = %s", (diet_id,))
+        conn.commit()
+        rows_affected = cursor.rowcount
+
+        if rows_affected == 0:
+            return jsonify({"message": "No diet record found with that ID"}), 404
+        return jsonify({"message": "Diet record deleted successfully"}), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logging.error(f"Error deleting diet record: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 if __name__ == '__main__':
     # Run on all available network interfaces on port 5000
     # THIS IS FOR DEVELOPMENT. For production, use a WSGI server like Gunicorn.
