@@ -4,8 +4,7 @@ Health Stats is an automated data platform that ingests, cleans, and consolidate
 
 Originally built manually and running on a local Raspberry Pi cluster, this system was agentically migrated and optimized to run on the GCP Always Free Tier (using an e2-micro VM and serverless Cloud Run) for $0/month. It was developed as a practical application project in preparation for successfully certifying as a [Google Cloud Platform Professional Data Engineer](https://cloud.google.com/learn/certification/data-engineer).
 
-*   **Looker Studio Dashboard**: [Access Live Reporting](https://datastudio.google.com/reporting/4d204527-a6ef-4860-b02c-73bf58cd1377)
-*   **Self-Hosted Prefect UI**: `http://146.148.87.26:4200`
+*   **Looker Studio Dashboard**: [Health Stats - Public](https://datastudio.google.com/reporting/4d204527-a6ef-4860-b02c-73bf58cd1377)
 
 
 
