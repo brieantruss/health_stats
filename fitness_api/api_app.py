@@ -233,13 +233,17 @@ def add_diet_record():
     Expected JSON:
     {
         "item": "Apple",
-        "record_date": "2023-10-26"
+        "record_date": "2023-10-26",
+        "grams": 150.0,
+        "ml": null
     }
     """
     data = request.get_json()
 
     item = data.get('item')
     record_date_str = data.get('record_date')
+    grams = data.get('grams')
+    ml = data.get('ml')
 
     if not item or not record_date_str:
         return jsonify({"error": "Missing required fields: item and record_date"}), 400
@@ -262,10 +266,10 @@ def add_diet_record():
             return jsonify({"error": f"Invalid food item: '{item}'. Please select from available descriptions."}), 400
 
         query = """
-            INSERT INTO diet (item, date)
-            VALUES (%s, %s)
+            INSERT INTO diet (item, date, grams, ml)
+            VALUES (%s, %s, %s, %s)
         """
-        cursor.execute(query, (item, record_date))
+        cursor.execute(query, (item, record_date, grams, ml))
         conn.commit()
         new_id = cursor.lastrowid
         return jsonify({"message": "Diet record added successfully", "id": new_id}), 201

@@ -272,6 +272,34 @@ def delete_existing_exercise(exercise_id):
         st.error(f"error deleting exercise: {e}")
         return {"error": str(e)}, 500
 
+@st.cache_data(ttl=3600) # Cache food descriptions for longer, as they don't change often
+def get_food_descriptions():
+    """
+    Fetches all food descriptions from the API.
+    """
+    try:
+        response = requests.get(f"{API_BASE_URL}/food_descriptions")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        st.error(f"could not connect to the api at {API_BASE_URL} to fetch food descriptions.")
+        return []
+    except requests.exceptions.RequestException as e:
+        st.error(f"error fetching food descriptions: {e}")
+        return []
+
+def add_new_diet_record(data):
+    """
+    Adds a new diet record via the API.
+    """
+    try:
+        response = requests.post(f"{API_BASE_URL}/diet", json=data)
+        response.raise_for_status()
+        return response.json(), response.status_code
+    except requests.exceptions.RequestException as e:
+        st.error(f"error adding diet record: {e}")
+        return {"error": str(e)}, 500
+
 
 # --- Streamlit Layout ---
 
@@ -314,6 +342,58 @@ with st.container(border=True): # Use a container for better visual grouping and
                 st.rerun() # Rerun to refresh the page
             else:
                 st.error(f"failed to add exercise record: {message.get('error', 'unknown error')}") # Lowercase messages
+
+st.markdown("---") # Visual separator
+
+## Add New Diet Record
+with st.container(border=True): # Use a container for better visual grouping and a border
+    st.markdown("<h2>add new diet record</h2>", unsafe_allow_html=True) # Changed to lowercase
+    with st.form("add_diet_form"):
+        food_descriptions = get_food_descriptions()
+        
+        col_diet1, col_diet2 = st.columns(2)
+        with col_diet1:
+            if food_descriptions:
+                selected_item = st.selectbox(
+                    "Item",
+                    food_descriptions,
+                    key="add_diet_item",
+                    help="Type to search for a food item or select from the dropdown."
+                )
+            else:
+                st.warning("could not load food descriptions. please ensure your api is running and the food_ingredients table has data.") # Lowercase messages
+                selected_item = None
+                
+        with col_diet2:
+            diet_record_date = st.date_input("Date", value=date.today(), key="add_diet_date")
+
+        col_diet3, col_diet4 = st.columns(2)
+        with col_diet3:
+            grams_input = st.number_input("Grams (optional)", min_value=0.0, step=0.1, value=None, format="%.3f", key="add_diet_grams")
+        
+        with col_diet4:
+            ml_input = st.number_input("ML (optional)", min_value=0.0, step=0.1, value=None, format="%.3f", key="add_diet_ml")
+
+        diet_submitted = st.form_submit_button("add diet record") # Lowercase button text
+        if diet_submitted:
+            if selected_item:
+                new_diet_record = {
+                    "item": selected_item,
+                    "record_date": diet_record_date.strftime('%Y-%m-%d'),
+                    "grams": float(grams_input) if grams_input is not None else None,
+                    "ml": float(ml_input) if ml_input is not None else None
+                }
+                message, status = add_new_diet_record(new_diet_record)
+                if status == 201:
+                    st.success(f"diet record added: {message.get('message')}. id: {message.get('id')}") # Lowercase messages
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.error(f"failed to add diet record: {message.get('error', 'unknown error')}") # Lowercase messages
+            else:
+                st.error("cannot add diet record: no food item selected or loaded.") # Lowercase messages
+
+st.markdown("---") # Visual separator
 
 
 ## View & Manage Exercise Records
