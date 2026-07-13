@@ -15,6 +15,7 @@ Thumbs.db
 # Secrets and Config
 .env
 *.json
+!package.json
 *.key
 
 # Optional: Ignore manual backups if you prefer

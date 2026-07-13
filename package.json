@@ -1,0 +1,7 @@
+{
+  "name": "health-stats-dataform",
+  "private": true,
+  "dependencies": {
+    "@dataform/core": "3.0.0"
+  }
+}
