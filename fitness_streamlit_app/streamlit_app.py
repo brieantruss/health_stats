@@ -243,20 +243,27 @@ def get_all_exercises(exercise_type=None):
     params = {}
     if exercise_type and exercise_type != "All":
         params['exercise'] = exercise_type
-    try:
-        response = requests.get(f"{API_BASE_URL}/exercises", params=params)
-        response.raise_for_status() # Raise an exception for HTTP errors
-        return response.json()
-    except requests.exceptions.ConnectionError:
-        st.error(f"could not connect to the api at {API_BASE_URL}. is your raspberry pi running and the api server active?")
-        return []
-    except requests.exceptions.RequestException as e:
-        st.error(f"error fetching exercises: {e}")
-        return []
+    last_exception = None
+    for _ in range(2):
+        try:
+            response = requests.get(f"{API_BASE_URL}/exercises", params=params, timeout=15)
+            response.raise_for_status() # Raise an exception for HTTP errors
+            data = response.json()
+            st.session_state["last_exercises_data"] = data
+            return data
+        except requests.exceptions.RequestException as e:
+            last_exception = e
+
+    st.warning("API temporarily unreachable. Retrying shortly. Showing last available records if present.")
+    if "last_exercises_data" in st.session_state:
+        return st.session_state["last_exercises_data"]
+
+    st.error(f"unable to fetch exercises from {API_BASE_URL}: {last_exception}")
+    return []
 
 def add_new_exercise(data):
     try:
-        response = requests.post(f"{API_BASE_URL}/exercises", json=data)
+        response = requests.post(f"{API_BASE_URL}/exercises", json=data, timeout=15)
         response.raise_for_status()
         return response.json(), response.status_code
     except requests.exceptions.RequestException as e:
@@ -265,7 +272,7 @@ def add_new_exercise(data):
 
 def delete_existing_exercise(exercise_id):
     try:
-        response = requests.delete(f"{API_BASE_URL}/exercises/{exercise_id}")
+        response = requests.delete(f"{API_BASE_URL}/exercises/{exercise_id}", timeout=15)
         response.raise_for_status()
         return response.json(), response.status_code
     except requests.exceptions.RequestException as e:
@@ -277,23 +284,25 @@ def get_food_descriptions():
     """
     Fetches all food descriptions from the API.
     """
-    try:
-        response = requests.get(f"{API_BASE_URL}/food_descriptions")
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.ConnectionError:
-        st.error(f"could not connect to the api at {API_BASE_URL} to fetch food descriptions.")
-        return []
-    except requests.exceptions.RequestException as e:
-        st.error(f"error fetching food descriptions: {e}")
-        return []
+    last_exception = None
+    for _ in range(2):
+        try:
+            response = requests.get(f"{API_BASE_URL}/food_descriptions", timeout=15)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            last_exception = e
+
+    st.warning("API temporarily unreachable while loading food descriptions. Please retry in a few seconds.")
+    st.error(f"unable to fetch food descriptions from {API_BASE_URL}: {last_exception}")
+    return []
 
 def add_new_diet_record(data):
     """
     Adds a new diet record via the API.
     """
     try:
-        response = requests.post(f"{API_BASE_URL}/diet", json=data)
+        response = requests.post(f"{API_BASE_URL}/diet", json=data, timeout=15)
         response.raise_for_status()
         return response.json(), response.status_code
     except requests.exceptions.RequestException as e:
