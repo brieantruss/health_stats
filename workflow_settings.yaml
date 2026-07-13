@@ -1,4 +1,4 @@
 defaultProject: my-data-479716
 defaultDataset: health_stats
-defaultLocation: us-central1
+defaultLocation: US
 defaultAssertionDataset: dataform_assertions
