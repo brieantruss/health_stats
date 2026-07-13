@@ -24,3 +24,9 @@ Thumbs.db
 
 # Local editor workspace file
 vm_config/mysql/health_stats.code-workspace
+
+# Runtime artifacts generated on VM during pipeline/API operation
+raw_files/
+processed_files/
+*.log
+prefect.db*
