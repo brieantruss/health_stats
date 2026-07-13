@@ -8,11 +8,18 @@ import mysql.connector
 from datetime import datetime
 import logging # Import logging module
 import os
+import time
 
 app = Flask(__name__)
 
 # Configure logging to show more details
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+FOOD_DESCRIPTIONS_CACHE = {
+    "items": None,
+    "loaded_at": 0,
+}
+FOOD_DESCRIPTIONS_TTL_SECONDS = 3600
 
 # Database connection helper
 def get_db_connection():
@@ -22,6 +29,37 @@ def get_db_connection():
         password=os.environ.get('MYSQL_PASSWORD', 'modulo'),
         database=os.environ.get('MYSQL_DB', 'health_stats')
     )
+
+def load_food_descriptions(force_refresh=False):
+    now = time.time()
+    cached_items = FOOD_DESCRIPTIONS_CACHE["items"]
+    if not force_refresh and cached_items is not None and (now - FOOD_DESCRIPTIONS_CACHE["loaded_at"] < FOOD_DESCRIPTIONS_TTL_SECONDS):
+        return cached_items
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """
+            SELECT DISTINCT main_food_description
+            FROM food_descriptions
+            WHERE main_food_description IS NOT NULL
+              AND main_food_description <> ''
+            ORDER BY main_food_description ASC
+        """
+        logging.info("Executing query: SELECT DISTINCT main_food_description FROM food_descriptions ORDER BY main_food_description ASC")
+        cursor.execute(query)
+        food_descriptions = [row[0] for row in cursor.fetchall()]
+        FOOD_DESCRIPTIONS_CACHE["items"] = food_descriptions
+        FOOD_DESCRIPTIONS_CACHE["loaded_at"] = now
+        logging.info(f"Successfully fetched {len(food_descriptions)} food descriptions.")
+        return food_descriptions
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # Allowed exercises for input validation (existing)
 ALLOWED_EXERCISES = [
@@ -203,28 +241,14 @@ def delete_exercise(exercise_id):
 @app.route('/food_descriptions', methods=['GET'])
 def get_food_descriptions():
     """
-    Retrieves all food descriptions from the food_ingredients table.
+    Retrieves all food descriptions from the cached food_descriptions table source.
     """
-    conn = None
-    cursor = None # Initialize cursor to None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        # Corrected column name to 'main_food_description'
-        query = "SELECT distinct ingredient_description FROM food_ingredients ORDER BY ingredient_description ASC"
-        logging.info(f"Executing query: {query}") # Log the query
-        cursor.execute(query)
-        food_descriptions = [row[0] for row in cursor.fetchall()]
-        logging.info(f"Successfully fetched {len(food_descriptions)} food descriptions.")
+        food_descriptions = load_food_descriptions()
         return jsonify(food_descriptions)
     except Exception as e:
         logging.error(f"Error fetching food descriptions: {e}", exc_info=True) # Log full exception info
         return jsonify({"error": str(e)}), 500
-    finally:
-        if cursor: # Ensure cursor is closed even if an error occurs
-            cursor.close()
-        if conn:
-            conn.close()
 
 @app.route('/diet', methods=['POST'])
 def add_diet_record():
@@ -258,9 +282,8 @@ def add_diet_record():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Optional: Validate if the item exists in food_ingredients
-        cursor.execute("SELECT COUNT(*) FROM food_ingredients WHERE ingredient_description = %s", (item,))
-        if cursor.fetchone()[0] == 0:
+        valid_food_items = set(load_food_descriptions())
+        if item not in valid_food_items:
             cursor.close()
             conn.close()
             return jsonify({"error": f"Invalid food item: '{item}'. Please select from available descriptions."}), 400
