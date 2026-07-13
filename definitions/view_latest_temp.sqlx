@@ -14,4 +14,4 @@ health_stats.weather
 
 ORDER BY
     datetime DESC
-LIMIT 1;
+LIMIT 1

@@ -10,4 +10,4 @@ SELECT DISTINCT
     c.*,
     cast(active_time_seconds as int64) / 60 AS active_time_minutes
 FROM
-    health_stats.cycling AS c;
+    health_stats.cycling AS c

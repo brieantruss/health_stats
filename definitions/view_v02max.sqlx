@@ -11,4 +11,4 @@ SELECT DISTINCT
     Time,
     vo2max
 FROM
-    health_stats.vo2max;
+    health_stats.vo2max

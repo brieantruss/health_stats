@@ -11,4 +11,4 @@ SELECT DISTINCT
     r.*,
     safe_cast(r.active_time_seconds as int64) / 60 AS active_time_minutes
 FROM
-    health_stats.running AS r;
+    health_stats.running AS r

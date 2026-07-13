@@ -18,4 +18,4 @@ SELECT DISTINCT
     ) AS local_time,
     CONCAT(CAST(ROUND(w.latitude, 2) AS STRING), ", ", CAST(ROUND(w.longitude, 2) AS STRING)) AS latlon
 FROM
-    health_stats.weather AS w;
+    health_stats.weather AS w

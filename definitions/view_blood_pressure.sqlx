@@ -19,4 +19,4 @@ SELECT DISTINCT
         CAST(CAST(SAFE_CAST(Diastolic AS FLOAT64) AS INT64) AS STRING)
     ) AS blood_pressure
 FROM
-    health_stats.blood_pressure;
+    health_stats.blood_pressure

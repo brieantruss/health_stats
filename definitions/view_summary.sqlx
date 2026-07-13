@@ -84,4 +84,4 @@ SELECT
 FROM steps_cte
 LEFT JOIN sleep_cte ON steps_cte.formatted_date = sleep_cte.formatted_date
 LEFT JOIN heart_rate_cte ON steps_cte.formatted_date = heart_rate_cte.formatted_date
-ORDER BY 1 DESC;
+ORDER BY 1 DESC

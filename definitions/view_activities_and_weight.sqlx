@@ -26,4 +26,4 @@ SELECT
         ELSE safe_cast(reps as int64)
     END AS quantity
 FROM
-    health_stats.exercises AS e;
+    health_stats.exercises AS e

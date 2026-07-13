@@ -32,4 +32,4 @@ SELECT
         ELSE 0
     END AS ranked_hour
 FROM
-    sleep_with_hour AS t3;
+    sleep_with_hour AS t3

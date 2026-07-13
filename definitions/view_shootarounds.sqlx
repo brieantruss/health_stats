@@ -29,4 +29,4 @@ FROM
 LEFT JOIN
     health_stats.shootaround AS s ON e.record_date = s.activity_date
 WHERE
-    exercise = 'shots';
+    exercise = 'shots'
