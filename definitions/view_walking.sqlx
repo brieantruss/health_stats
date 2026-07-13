@@ -1,0 +1,30 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_walking"
+}
+
+# walking
+
+SELECT
+    activity_type,
+    activity_name,
+    cast(PARSE_DATE('%Y.%m.%d', SPLIT(Date, ' ')[OFFSET(0)]) AS string) as date,
+    Time,
+    elapsed_time,
+    active_time,
+    distance_miles,
+    calories_kcal,
+    Steps,
+    average_heart_rate,
+    max_heart_rate,
+    average_speed,
+    max_speed,
+    safe_cast(active_time as int64) / 60 AS active_minutes,
+    MAX(last_updated) AS last_updated
+FROM
+    health_stats.walking
+GROUP BY
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
+ORDER BY
+    date DESC;

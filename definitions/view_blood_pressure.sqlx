@@ -1,0 +1,22 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_blood_pressure"
+}
+
+# blood_pressure
+
+SELECT DISTINCT
+    Date,
+    Time,
+    Diastolic,
+    Systolic,
+    heart_rate,
+    Comment,
+    CONCAT(
+        CAST(CAST(SAFE_CAST(Systolic AS FLOAT64) AS INT64) AS STRING), 
+        " / ", 
+        CAST(CAST(SAFE_CAST(Diastolic AS FLOAT64) AS INT64) AS STRING)
+    ) AS blood_pressure
+FROM
+    health_stats.blood_pressure;

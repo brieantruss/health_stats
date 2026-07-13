@@ -1,0 +1,35 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_sleep_time_by_stage"
+}
+
+# Sleep Time by Stage
+
+WITH
+    sleep_with_datetime AS (
+        SELECT
+            t1.*,
+            COALESCE(
+                SAFE.PARSE_DATETIME('%Y.%m.%d %H:%M:%S', t1.Date),
+                SAFE.PARSE_DATETIME('%Y.%m.%d %H.%M', t1.Date)
+            ) AS date_time
+        FROM
+            health_stats.sleep AS t1
+    ),
+    sleep_with_hour AS (
+        SELECT
+            t2.*,
+            EXTRACT(HOUR FROM t2.date_time) AS hour_of_day
+        FROM
+            sleep_with_datetime AS t2
+    )
+SELECT
+    t3.*,
+    CASE
+        WHEN hour_of_day >= 22 THEN hour_of_day - 21
+        WHEN hour_of_day >= 0 AND hour_of_day <= 8 THEN hour_of_day + 3
+        ELSE 0
+    END AS ranked_hour
+FROM
+    sleep_with_hour AS t3;

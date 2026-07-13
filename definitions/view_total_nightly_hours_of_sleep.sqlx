@@ -1,0 +1,25 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_total_nightly_hours_of_sleep"
+}
+
+# total_hours_of_sleep_by_day
+
+SELECT
+    DATE( -- FIX: Use DATE() to extract the date from the parsed DATETIME
+        COALESCE(
+            SAFE.PARSE_DATETIME('%Y.%m.%d %H:%M:%S', t1.Date),
+            SAFE.PARSE_DATETIME('%Y.%m.%d %H.%M', t1.Date)
+            -- If you have truly date-only strings, you can add:
+            -- SAFE.PARSE_DATETIME('%Y.%m.%d', t1.Date) 
+        )
+    ) AS Date,
+    SUM(safe_cast(Duration as int64)) / 3600 AS duration_hours
+FROM
+    health_stats.sleep AS t1
+GROUP BY
+    1
+ORDER BY 
+    1
+    DESC;

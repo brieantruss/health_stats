@@ -1,0 +1,17 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_latest_temp"
+}
+
+# latest_temp
+
+SELECT
+    round((cast(temp as numeric) * 1.8) + 32, 1) AS temp_f
+FROM 
+
+health_stats.weather
+
+ORDER BY
+    datetime DESC
+LIMIT 1;

@@ -1,0 +1,15 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_latest_conditions"
+}
+
+# latest_conditions
+
+SELECT
+    conditions
+FROM
+    health_stats.weather
+ORDER BY
+    datetime DESC
+LIMIT 1;

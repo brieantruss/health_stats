@@ -1,0 +1,96 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_sleep_summary"
+}
+
+# sleep_summary
+
+WITH
+    -- 1. Safely parse sleep.Date into a DATETIME/TIMESTAMP
+    sleep_parsed AS (
+        SELECT
+            sleep.*,
+            COALESCE(
+                SAFE.PARSE_DATETIME('%Y.%m.%d %H:%M:%S', sleep.Date), -- Handle YYYY.MM.DD HH:MI:SS
+                SAFE.PARSE_DATETIME('%Y.%m.%d %H.%M', sleep.Date)     -- Handle YYYY.MM.DD HH.MI
+            ) AS date_time_parsed
+        FROM
+            health_stats.sleep AS sleep
+    ),
+    -- 2. Safely parse weather.datetime into a TIMESTAMP (handling 'T' or space separator)
+    weather_parsed AS (
+        SELECT
+            w.*,
+            COALESCE(
+                SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%S', w.datetime), -- Try T-separated format
+                SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', w.datetime)  -- Fallback to space-separated format
+            ) AS parsed_datetime
+        FROM
+            health_stats.weather AS w
+    ),
+    -- 3. The original weather CTE, now using the clean 'parsed_datetime'
+    weather AS (
+        SELECT
+            w.temp,
+            w.precip,
+            w.preciptype,
+            w.moonphase,
+            w.conditions,
+            -- FIX: Changed INT64 to DECIMAL/FLOAT64 so decimal comparisons (< 0.25) actually work
+            CASE
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) = 0 THEN "new moon"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) > 0 AND SAFE_CAST(w.moonphase AS DECIMAL) < 0.25 THEN "waxing crescent"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) = 0.25 THEN "first quarter"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) > 0.25 AND SAFE_CAST(w.moonphase AS DECIMAL) < 0.5 THEN "waxing gibbous"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) = 0.5 THEN "full moon"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) > 0.5 AND SAFE_CAST(w.moonphase AS DECIMAL) < 0.75 THEN "waning gibbous"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) = 0.75 THEN "last quarter"
+                WHEN SAFE_CAST(w.moonphase AS DECIMAL) > 0.75 AND SAFE_CAST(w.moonphase AS DECIMAL) < 1 THEN "waning crescent"
+            END AS moon_phase,
+            d.date_only,
+            d.chosen_datetime_for_day
+        FROM
+            weather_parsed AS w 
+        INNER JOIN (
+            SELECT
+                DATE(w_inner.parsed_datetime) AS date_only, 
+                COALESCE(
+                    MAX(CASE WHEN TIME(w_inner.parsed_datetime) = PARSE_TIME('%H:%M:%S', '00:00:00') THEN w_inner.parsed_datetime END),
+                    MIN(w_inner.parsed_datetime)
+                ) AS chosen_datetime_for_day
+            FROM
+                weather_parsed AS w_inner 
+            GROUP BY
+                1
+        ) AS d ON w.parsed_datetime = d.chosen_datetime_for_day 
+            AND DATE(w.parsed_datetime) = d.date_only 
+    )
+SELECT
+    DATE(s.date_time_parsed) AS date, 
+    s.Stage,
+    CASE
+        WHEN s.Stage = 'awake' THEN '0) Awake'
+        WHEN s.Stage = 'light' THEN '1) Light'
+        WHEN s.Stage = 'rem' THEN '2) REM'
+        WHEN s.Stage = 'deep' THEN '3) Deep'
+    END AS sleep_stage_rank,
+    CASE
+        WHEN w.conditions IS NULL THEN "No data"
+    ELSE w.conditions
+    END AS conditions,
+    w.precip,
+    w.preciptype,
+    w.moonphase,
+    w.temp,
+    -- FIX: Safely cast Duration from STRING to INT64 before running aggregate functions
+    SUM(SAFE_CAST(s.Duration AS INT64)) AS duration_seconds,
+    ROUND(SUM(SAFE_CAST(s.Duration AS INT64)) / 3600, 1) AS duration_hours
+FROM
+    sleep_parsed AS s 
+LEFT JOIN
+    weather AS w ON w.date_only = DATE(s.date_time_parsed) 
+GROUP BY
+    1, 2, 3, 4, 5, 6, 7, 8
+ORDER BY
+    1 DESC;

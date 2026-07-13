@@ -1,0 +1,29 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_activities_and_weight"
+}
+
+#activities and weight
+
+SELECT
+    e.*,
+    CASE
+        WHEN exercise LIKE '%_stretch' THEN 'stretch'
+        WHEN exercise = 'weight' THEN 'weight'
+        ELSE 'exercise'
+    END AS category,
+    CASE
+        WHEN exercise LIKE '%_stretch' THEN safe_cast(exercise as int64)
+        ELSE NULL
+    END AS stretch,
+    CASE
+        WHEN exercise = 'weight' THEN safe_cast(reps as int64)
+        ELSE 0
+    END AS weight,
+    CASE
+        WHEN reps IS NULL THEN 0
+        ELSE safe_cast(reps as int64)
+    END AS quantity
+FROM
+    health_stats.exercises AS e;

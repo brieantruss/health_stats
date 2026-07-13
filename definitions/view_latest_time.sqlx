@@ -1,0 +1,24 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_latest_time"
+}
+
+# latest_time
+
+SELECT
+    FORMAT_DATETIME('%Y-%m-%d %H:%M', 
+        TIMESTAMP_ADD(
+            COALESCE(
+                SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%S', datetime), -- Try T-separated format
+                SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', datetime)  -- Fallback to space-separated format
+            ),
+            -- Safely handle the decimal by casting to FLOAT64 first, then to INT64
+            INTERVAL CAST(SAFE_CAST(tzoffset AS FLOAT64) AS INT64) HOUR
+        )
+    ) AS local_time
+FROM
+    health_stats.weather
+ORDER BY
+    datetime DESC
+LIMIT 1;

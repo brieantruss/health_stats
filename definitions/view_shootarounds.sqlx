@@ -1,0 +1,32 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_shootarounds"
+}
+
+# shootarounds
+
+SELECT DISTINCT
+    s.activity_type,
+    s.activity_name,
+    s.activity_date,
+    s.activity_time,
+    s.elapsed_time_seconds,
+    s.active_time_seconds,
+    s.distance_miles,
+    s.calories_kcal,
+    s.steps,
+    s.average_heart_rate,
+    s.max_heart_rate,
+    s.average_speed_mph,
+    s.max_speed_mph,
+    safe_cast(s.elapsed_time_seconds as int64) / 60 AS elapsed_time_minutes,
+    safe_cast(s.active_time_seconds as int64) / 60 AS active_time_minutes,
+    e.record_date AS shootaround_date,
+    e.reps AS shots
+FROM
+    health_stats.exercises AS e
+LEFT JOIN
+    health_stats.shootaround AS s ON e.record_date = s.activity_date
+WHERE
+    exercise = 'shots';

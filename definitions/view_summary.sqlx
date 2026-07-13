@@ -1,0 +1,87 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_summary"
+}
+
+WITH steps_cte AS (
+    SELECT
+        FORMAT_DATE(
+            '%Y/%m/%d',
+            DATE(
+                CASE
+                    -- Pattern 1: NEW - Full timestamp with DOT separators (e.g., 2025.10.25 10.30.45)
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __.__.__' THEN PARSE_DATETIME('%Y.%m.%d %H.%M.%S', SAFE_CAST(t.Date AS STRING))
+                    -- Pattern 2: Full timestamp with COLON separators (e.g., 2025.10.25 10:30:45)
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __:__:__' THEN PARSE_DATETIME('%Y.%m.%d %H:%M:%S', SAFE_CAST(t.Date AS STRING))
+                    -- Pattern 3: Minutes timestamp with COLON separator (e.g., 2025.10.25 10:30)
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __:__' THEN PARSE_DATETIME('%Y.%m.%d %H:%M', SAFE_CAST(t.Date AS STRING))
+                    -- Pattern 4: Minutes timestamp with DOT separator (e.g., 2025.10.25 10.30)
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __.__' THEN PARSE_DATETIME('%Y.%m.%d %H.%M', SAFE_CAST(t.Date AS STRING))
+                    ELSE NULL
+                END
+            )
+        ) AS formatted_date,
+        SUM(t.steps) AS total_steps
+    FROM health_stats.steps AS t
+    WHERE t.Date IS NOT NULL
+    GROUP BY 1
+),
+sleep_cte AS (
+    SELECT
+        FORMAT_DATE(
+            '%Y/%m/%d',
+            DATE(
+                CASE
+                    -- Pattern 1: NEW - Full timestamp with DOT separators
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __.__.__' THEN PARSE_DATETIME('%Y.%m.%d %H.%M.%S', SAFE_CAST(t.Date AS STRING))
+                    -- Pattern 2: Full timestamp with COLON separators
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __:__:__' THEN PARSE_DATETIME('%Y.%m.%d %H:%M:%S', SAFE_CAST(t.Date AS STRING))
+                    -- Pattern 3: Minutes timestamp with COLON separator
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __:__' THEN PARSE_DATETIME('%Y.%m.%d %H:%M', SAFE_CAST(t.Date AS STRING))
+                    -- Pattern 4: Minutes timestamp with DOT separator
+                    WHEN SAFE_CAST(t.Date AS STRING) LIKE '____.__.__ __.__' THEN PARSE_DATETIME('%Y.%m.%d %H.%M', SAFE_CAST(t.Date AS STRING))
+                    ELSE NULL
+                END
+            )
+        ) AS formatted_date,
+        SUM(CASE WHEN t.Stage = 'awake' THEN safe_cast(t.Duration as int64) ELSE 0 END) AS awake_at_night,
+        SUM(CASE WHEN t.Stage = 'light' THEN safe_cast(t.Duration as int64) ELSE 0 END) AS light_sleep,
+        SUM(CASE WHEN t.Stage = 'deep' THEN safe_cast(t.Duration as int64) ELSE 0 END) AS deep_sleep,
+        SUM(CASE WHEN t.Stage = 'rem' THEN safe_cast(t.Duration as int64) ELSE 0 END) AS rem_sleep
+    FROM health_stats.sleep AS t
+    WHERE t.Date IS NOT NULL
+    GROUP BY 1
+),
+heart_rate_cte AS (
+    SELECT
+        FORMAT_DATE(
+            '%Y/%m/%d',
+            DATE(
+                -- FIX: Use COALESCE and SAFE.PARSE_DATETIME to support both 'T' and space-separated formats safely
+                COALESCE(
+                    SAFE.PARSE_DATETIME('%Y-%m-%dT%H:%M:%S', SAFE_CAST(t.date AS STRING)),
+                    SAFE.PARSE_DATETIME('%Y-%m-%d %H:%M:%S', SAFE_CAST(t.date AS STRING))
+                )
+            )
+        ) AS formatted_date,
+        AVG(SAFE_CAST(t.heart_rate AS FLOAT64)) AS avg_heart_rate 
+    FROM health_stats.heart_rate AS t
+    WHERE t.date IS NOT NULL
+    GROUP BY 1
+)
+SELECT
+    steps_cte.formatted_date AS date,
+    steps_cte.total_steps,
+    sleep_cte.awake_at_night,
+    sleep_cte.light_sleep,
+    sleep_cte.deep_sleep,
+    sleep_cte.rem_sleep,
+    -- FIX: Use COALESCE so a missing sleep stage doesn't clear out your entire total_sleep calculation
+    (COALESCE(sleep_cte.awake_at_night, 0) + COALESCE(sleep_cte.light_sleep, 0) + COALESCE(sleep_cte.deep_sleep, 0) + COALESCE(sleep_cte.rem_sleep, 0)) AS total_sleep,
+    CAST(((COALESCE(sleep_cte.awake_at_night, 0) + COALESCE(sleep_cte.light_sleep, 0) + COALESCE(sleep_cte.deep_sleep, 0) + COALESCE(sleep_cte.rem_sleep, 0)) / (60 * 60)) AS STRING) AS total_hours_of_sleep,
+    CAST(ROUND(heart_rate_cte.avg_heart_rate) AS INT64) AS avg_heart_rate
+FROM steps_cte
+LEFT JOIN sleep_cte ON steps_cte.formatted_date = sleep_cte.formatted_date
+LEFT JOIN heart_rate_cte ON steps_cte.formatted_date = heart_rate_cte.formatted_date
+ORDER BY 1 DESC;

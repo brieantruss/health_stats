@@ -1,0 +1,14 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_v02max"
+}
+
+# vo2max
+
+SELECT DISTINCT
+    Date,
+    Time,
+    vo2max
+FROM
+    health_stats.vo2max;
