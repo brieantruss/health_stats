@@ -309,6 +309,38 @@ def add_new_diet_record(data):
         st.error(f"error adding diet record: {e}")
         return {"error": str(e)}, 500
 
+@st.cache_data(ttl=60)
+def get_all_diet_records(item=None):
+    params = {}
+    if item and item != "All":
+        params['item'] = item
+    last_exception = None
+    for _ in range(2):
+        try:
+            response = requests.get(f"{API_BASE_URL}/diet", params=params, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            st.session_state["last_diet_data"] = data
+            return data
+        except requests.exceptions.RequestException as e:
+            last_exception = e
+
+    st.warning("API temporarily unreachable. Retrying shortly. Showing last available diet records if present.")
+    if "last_diet_data" in st.session_state:
+        return st.session_state["last_diet_data"]
+
+    st.error(f"unable to fetch diet records from {API_BASE_URL}: {last_exception}")
+    return []
+
+def delete_existing_diet_record(diet_id):
+    try:
+        response = requests.delete(f"{API_BASE_URL}/diet/{diet_id}", timeout=15)
+        response.raise_for_status()
+        return response.json(), response.status_code
+    except requests.exceptions.RequestException as e:
+        st.error(f"error deleting diet record: {e}")
+        return {"error": str(e)}, 500
+
 
 # --- Streamlit Layout ---
 
@@ -445,3 +477,47 @@ with st.container(border=True): # Use a container for better visual grouping and
                     st.warning("please enter an id to delete.") # Lowercase messages
     else:
         st.info("no exercise records found or api is unreachable.") # Lowercase messages
+
+st.markdown("---") # Visual separator
+
+## View & Manage Diet Records
+with st.container(border=True): # Use a container for better visual grouping and a border
+    st.markdown("<h2>view & manage diet records</h2>", unsafe_allow_html=True) # Changed to lowercase
+
+    diet_filter_options = ["All"] + get_food_descriptions()
+    filter_diet_item = st.selectbox(
+        "Filter by Food Item",
+        diet_filter_options,
+        key="filter_diet_item",
+        help="Type to search for a food item or select from the dropdown to filter records."
+    )
+
+    diet_data = get_all_diet_records(filter_diet_item)
+
+    if diet_data:
+        diet_df = pd.DataFrame(diet_data)
+        diet_df['record_date'] = pd.to_datetime(diet_df['record_date'])
+        diet_df = diet_df.sort_values(by=['record_date', 'id'], ascending=[False, False])
+        st.dataframe(diet_df.set_index('id'), use_container_width=True)
+
+        st.markdown("<h3>delete diet record by id</h3>", unsafe_allow_html=True)
+        diet_del1, diet_del2 = st.columns([0.7, 0.3])
+        with diet_del1:
+            delete_diet_id = st.number_input("Enter Diet ID to delete", min_value=1, step=1, value=None, key="delete_diet_id", placeholder="e.g., 5")
+        with diet_del2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("delete selected diet record"):
+                if delete_diet_id:
+                    message, status = delete_existing_diet_record(int(delete_diet_id))
+                    if status == 200:
+                        st.success(f"diet record deleted: {message.get('message')}")
+                        st.cache_data.clear()
+                        st.rerun()
+                    elif status == 404:
+                        st.warning(f"no diet record found with id: {delete_diet_id}")
+                    else:
+                        st.error(f"failed to delete diet record: {message.get('error', 'unknown error')}")
+                else:
+                    st.warning("please enter an id to delete.")
+    else:
+        st.info("no diet records found or api is unreachable.")
