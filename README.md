@@ -41,6 +41,24 @@ I migrated, debugged, and optimized this cloud setup in collaboration with an AI
 
 ---
 
+## Tracker Workflow
+
+The workout tracker is designed to be quick to use on a daily basis while still capturing structured data for downstream analytics.
+
+1.  Start typing in the **Exercise Type** dropdown to filter the list in place. For example, typing `push` narrows the menu to push-up variations so it is easy to find the exact movement without scrolling through the full exercise catalog.
+
+    ![Tracker workflow step 1: searchable exercise dropdown](docs/images/tracker_step_1.png)
+
+2.  Select the exercise, confirm the date, and enter the most relevant quantity for that movement. Rep-based exercises can be logged with **reps** and optional **resistance**, while time-based movements and stretches can be logged with **duration** instead.
+
+    ![Tracker workflow step 2: entering reps and date](docs/images/tracker_step_2.png)
+
+3.  Submit the record and immediately verify it in the table at the bottom of the page. New entries show up in the tracker UI right away, are written into the `health_stats` database, and are then available for downstream syncing into BigQuery and dashboard analytics.
+
+    ![Tracker workflow step 3: new record appears in the table](docs/images/tracker_step_3.png)
+
+---
+
 ## BigQuery Table Schema Mapping
 
 | MySQL Source Table | Target BigQuery Table | Sync Pattern | Data Domain / Description |

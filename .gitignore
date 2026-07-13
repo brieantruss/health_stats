@@ -21,3 +21,6 @@ Thumbs.db
 # Optional: Ignore manual backups if you prefer
 *_bu.py
 *_backup.py
+
+# Local editor workspace file
+vm_config/mysql/health_stats.code-workspace
