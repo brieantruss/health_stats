@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MySQL Connection Details ---
-DB_HOST = '192.168.0.110'
+DB_HOST = 'localhost'
 DB_USER = 'modulo'
 DB_PASSWORD = 'modulo'
 DB_NAME = 'health_stats'
@@ -17,8 +17,9 @@ DB_NAME = 'health_stats'
 # API Key
 key = '9R2RM7GGXUTX9FK3R6TCL5E92'
 
-# Define the output directory for the CSV file
-OUTPUT_DIR = '/home/modulo/development/health_stats/processed_files/weather'
+# Define the output directory for the CSV file (portable, dynamically resolved)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+OUTPUT_DIR = os.path.join(BASE_DIR, "processed_files", "weather")
 OUTPUT_FILENAME = 'weather.csv'
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
 

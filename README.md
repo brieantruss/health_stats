@@ -7,22 +7,7 @@ Originally built manually and running on a local Raspberry Pi cluster, this syst
 *   **Looker Studio Dashboard**: [Access Live Reporting](https://datastudio.google.com/reporting/4d204527-a6ef-4860-b02c-73bf58cd1377)
 *   **Self-Hosted Prefect UI**: `http://146.148.87.26:4200`
 
----
 
-## Recognition & Shoutouts
-
-I want to give special recognition to the developers, communities, and organizations that made it possible to build and operate this platform at little to no cost.
-
-*   **[Samsung Galaxy Watch](https://www.samsung.com/us/watches/)**: Captures the core health and activity data that powers this entire analytics platform.
-*   **[Health Sync](https://healthsync.app/)**: Makes the whole pipeline possible by automating exports of my Samsung Watch data to Google Drive.
-*   **[GPS Logger](https://gpslogger.app/)**: Provides reliable mobile GPS tracking data that feeds the location and weather enrichment workflows.
-*   **[Visual Crossing Weather API](https://www.visualcrossing.com/weather-api/)**: Powers the weather enrichment layer so activities can be analyzed with environmental context.
-*   **[Google Cloud Free Tier](https://cloud.google.com/free?hl=en)**: Made it realistic to host and operate this project in the cloud with a $0/month target.
-*   **[Ubuntu Server](https://ubuntu.com/)**: Provides the stable operating system foundation for VM services and automation jobs.
-*   **[Raspberry Pi](https://www.raspberrypi.com/)**: Served as the original platform where early versions of this pipeline were prototyped before cloud migration.
-*   **[Google Cloud Professional Data Engineer Certificate](https://www.credly.com/badges/8efeb8f9-dd9e-46d2-b7c0-cc1ba975194e)**: A major learning milestone that directly influenced the architecture and engineering choices in this project.
-
----
 
 ## AI Collaboration Notice
 
@@ -110,3 +95,18 @@ Running a full database, orchestration server, and two APIs on a GCP `e2-micro` 
 │   └── systemd/                      # Managed daemon systemd units (Prefect & APIs)
 └── ARCHITECTURE_AND_MANAGEMENT.md    # Master sysadmin operations & troubleshooting playbook
 ```
+
+---
+
+## Recognition & Shoutouts
+
+I want to give special recognition to the developers, communities, and organizations that made it possible to build and operate this platform at little to no cost.
+
+*   **[Samsung Galaxy Watch](https://www.samsung.com/us/watches/)**: Captures the core health and activity data that powers this entire analytics platform.
+*   **[Health Sync](https://healthsync.app/)**: Makes the whole pipeline possible by automating exports of my Samsung Watch data to Google Drive.
+*   **[GPS Logger](https://gpslogger.app/)**: Provides reliable mobile GPS tracking data that feeds the location and weather enrichment workflows.
+*   **[Visual Crossing Weather API](https://www.visualcrossing.com/weather-api/)**: Powers the weather enrichment layer so activities can be analyzed with environmental context.
+*   **[Google Cloud Free Tier](https://cloud.google.com/free?hl=en)**: Made it realistic to host and operate this project in the cloud with a $0/month target.
+*   **[Ubuntu Server](https://ubuntu.com/)**: Provides the stable operating system foundation for VM services and automation jobs.
+*   **[Raspberry Pi](https://www.raspberrypi.com/)**: Served as the original platform where early versions of this pipeline were prototyped before cloud migration.
+*   **[Google Cloud Professional Data Engineer Certificate](https://www.credly.com/badges/8efeb8f9-dd9e-46d2-b7c0-cc1ba975194e)**: A major learning milestone that directly influenced the architecture and engineering choices in this project.

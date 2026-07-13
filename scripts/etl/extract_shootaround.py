@@ -9,7 +9,12 @@ from datetime import datetime
 
 # --- Google Drive Configuration ---
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
-DRIVE_FOLDER_ID = '1RnPek-KTsVmpJPw4M3kZaKwYaec5aCUw'
+
+# Import the centralized folder configuration
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from drive_config import FOLDER_WORKOUTS as DRIVE_FOLDER_ID
 
 # --- Local Save Path Configuration ---
 # LOCAL_SAVE_PATH will be passed as a command-line argument

@@ -7,8 +7,12 @@ from datetime import datetime
 
 # --- Google Drive Configuration ---
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
-# This is the new Google Drive folder ID as per your request
-DRIVE_FOLDER_ID = '15qiYQIdtWw8--XkwM8pRc9Svx5xUvymD'
+
+# Import the centralized folder configuration
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from drive_config import FOLDER_LOCATIONS as DRIVE_FOLDER_ID
 
 # --- Move files ---
 

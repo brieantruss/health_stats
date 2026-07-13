@@ -7,7 +7,12 @@ import sys # Import sys module
 # --- Google Drive Configuration ---
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
 # SERVICE_ACCOUNT_FILE will be passed as a command-line argument
-DRIVE_FOLDER_ID = '1X6BX7SNdxxvs81-qJ2ALl3DU3EeD-xEL'  # Your Google Drive folder ID
+
+# Import the centralized folder configuration
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from drive_config import FOLDER_OXYGEN as DRIVE_FOLDER_ID
 
 # --- Local Save Path Configuration ---
 # LOCAL_SAVE_PATH will be passed as a command-line argument

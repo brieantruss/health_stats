@@ -41,29 +41,26 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
         with open(file_path, 'r', newline='') as csv_file:
             csv_reader = csv.DictReader(csv_file) # Use DictReader to access columns by name
 
-            # Validate header presence for the expected fields
-            expected_headers = ['time', 'lat', 'lon', 'last_updated']
-            if not all(header in csv_reader.fieldnames for header in expected_headers):
-                print(f"Error: CSV file {os.path.basename(file_path)} is missing one or more expected headers: {expected_headers}")
+            # Dynamically map the headers to support both formats (time/timestamp, lat/latitude, lon/longitude)
+            fieldnames = csv_reader.fieldnames
+            time_key = 'time' if 'time' in fieldnames else ('timestamp' if 'timestamp' in fieldnames else None)
+            lat_key = 'lat' if 'lat' in fieldnames else ('latitude' if 'latitude' in fieldnames else None)
+            lon_key = 'lon' if 'lon' in fieldnames else ('longitude' if 'longitude' in fieldnames else None)
+            last_updated_key = 'last_updated' if 'last_updated' in fieldnames else None
+
+            if not time_key or not lat_key or not lon_key or not last_updated_key:
+                expected_headers = ['time', 'lat', 'lon', 'last_updated']
+                print(f"Error: CSV file {os.path.basename(file_path)} is missing one or more expected headers: {expected_headers}. Found: {fieldnames}")
                 return # Exit if headers are not as expected
 
             for row in csv_reader:
                 try:
-                    
-                    time_val = row['time']
-                    # Convert data to appropriate types
-                    
-
-                    lat_val = float(row['lat'])
-                    lon_val = float(row['lon'])
-
-                    # 'last_updated' field from CSV is also a string, assumed to be in a format MySQL can handle directly,
-                    # or parsed if a specific format is known.
-                    last_updated_val = row['last_updated'] 
-                    
+                    time_val = row[time_key]
+                    lat_val = float(row[lat_key])
+                    lon_val = float(row[lon_key])
+                    last_updated_val = row[last_updated_key] 
                     
                     data_to_insert.append((time_val, lat_val, lon_val, last_updated_val))
-                    # data_to_insert.append((lat_val, lon_val, time_val, last_updated_val))
 
                 except (ValueError, KeyError, IndexError) as e:
                     print(f"Skipping row in {os.path.basename(file_path)} due to data conversion or missing column error: {row} - {e}")

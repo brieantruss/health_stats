@@ -7,7 +7,12 @@ import sys # Import sys module
 # --- Google Drive Configuration ---
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
 # SERVICE_ACCOUNT_FILE will be passed as a command-line argument
-DRIVE_FOLDER_ID = '1JeUCn91JIHvPMpuadFGXoALyEbyETQI-'  # Your Google Drive folder ID
+
+# Import the centralized folder configuration
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from drive_config import FOLDER_HEART_RATE as DRIVE_FOLDER_ID
 
 # --- Local Save Path Configuration ---
 # LOCAL_SAVE_PATH will be passed as a command-line argument
@@ -52,7 +57,10 @@ def move_files_local(service_account_file, local_save_path):
             print(f"Error listing files from Google Drive: {e}")
             break # Exit loop on error
 
-    filename_pattern = re.compile(r"Heart rate \d{4}\.\d{2}\.\d{2}( \d{2}\.\d{2})? Samsung Health\.csv")
+    filename_patterns = [
+        re.compile(r"Heart rate \d{4}\.\d{2}\.\d{2}( \d{2}\.\d{2})? Samsung Health\.csv"),
+        re.compile(r"^Heart rate \d{4}[\.\-_/\s]?\d{2}[\.\-_/\s]?\d{2}.*?Samsung Health\.csv$", re.IGNORECASE)
+    ]
     files_downloaded = False
 
     if not all_items:
@@ -63,7 +71,7 @@ def move_files_local(service_account_file, local_save_path):
             file_modified_time = item['modifiedTime']
             local_file_path = os.path.join(local_save_path, file_name)
 
-            if filename_pattern.match(file_name):
+            if any(pat.match(file_name) for pat in filename_patterns):
                 file_id = item['id']
 
                 try:

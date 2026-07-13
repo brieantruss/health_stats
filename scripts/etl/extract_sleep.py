@@ -7,10 +7,12 @@ import sys # Import sys module
 # --- Google Drive Configuration ---
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive']
 # SERVICE_ACCOUNT_FILE will be passed as a command-line argument
-DRIVE_FOLDER_IDS = [
-    '1Tw9VdoGfLz0eRQc44GycxTylnAo8JoF-',  # Original Google Drive folder ID
-    '122phx23TZI52gKoJDoT28zuaR5Ah9Bpm'   # New Google Drive folder ID
-]
+
+# Import the centralized folder configuration
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from drive_config import FOLDER_SLEEP_IDS as DRIVE_FOLDER_IDS
 
 # --- Local Save Path Configuration ---
 # LOCAL_SAVE_PATH will be passed as a command-line argument
@@ -36,7 +38,10 @@ def move_files_local(service_account_file, local_save_path):
     # Ensure the local save directory exists
     os.makedirs(local_save_path, exist_ok=True)
 
-    filename_pattern = re.compile(r"Sleep \d{4}\.\d{2}\.\d{2}( \d{2}\:\d{2}:\d{2})? Samsung Health\.csv")
+    filename_patterns = [
+        re.compile(r"Sleep \d{4}\.\d{2}\.\d{2}( \d{2}\:\d{2}:\d{2})? Samsung Health\.csv"),
+        re.compile(r"^Sleep \d{4}[\.\-_/\s]?\d{2}[\.\-_/\s]?\d{2}.*?Samsung Health\.csv$", re.IGNORECASE)
+    ]
     files_downloaded = False
 
     # Iterate over all configured Google Drive folders to download sleep CSVs
@@ -69,7 +74,7 @@ def move_files_local(service_account_file, local_save_path):
             file_modified_time = item['modifiedTime']
             local_file_path = os.path.join(local_save_path, file_name)
 
-            if filename_pattern.match(file_name):
+            if any(pat.match(file_name) for pat in filename_patterns):
                 file_id = item['id']
 
                 try:
