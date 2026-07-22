@@ -1,0 +1,176 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_daily_nutrient_tracking"
+}
+
+WITH target_mapping AS (
+  SELECT
+    nutrient AS original_target_name,
+    SAFE_CAST(REGEXP_EXTRACT(daily_value, r'^([0-9.]+)') AS FLOAT64) AS target_value,
+    REGEXP_EXTRACT(daily_value, r'([a-zA-Z]+.*)$') AS measurement_unit,
+    CASE LOWER(nutrient)
+      WHEN 'added sugars' THEN 'Sugars, total'
+      WHEN 'calcium' THEN 'Calcium'
+      WHEN 'choline' THEN 'Choline, total'
+      WHEN 'cholesterol' THEN 'Cholesterol'
+      WHEN 'copper' THEN 'Copper'
+      WHEN 'dietary fiber' THEN 'Fiber, total dietary'
+      WHEN 'fat' THEN 'Total Fat'
+      WHEN 'folate-folic acid' THEN 'Folate, DFE'
+      WHEN 'iron' THEN 'Iron'
+      WHEN 'magnesium' THEN 'Magnesium'
+      WHEN 'niacin' THEN 'Niacin'
+      WHEN 'phosphorus' THEN 'Phosphorus'
+      WHEN 'potassium' THEN 'Potassium'
+      WHEN 'protein' THEN 'Protein'
+      WHEN 'riboflavin' THEN 'Riboflavin'
+      WHEN 'saturated fat' THEN 'Fatty acids, total saturated'
+      WHEN 'selenium' THEN 'Selenium'
+      WHEN 'sodium' THEN 'Sodium'
+      WHEN 'thiamin' THEN 'Thiamin'
+      WHEN 'total carbohydrate' THEN 'Carbohydrate'
+      WHEN 'vitamin a' THEN 'Vitamin A, RAE'
+      WHEN 'vitamin b6' THEN 'Vitamin B-6'
+      WHEN 'vitamin b12' THEN 'Vitamin B-12'
+      WHEN 'vitamin c' THEN 'Vitamin C'
+      WHEN 'vitamin d' THEN 'Vitamin D (D2 + D3)'
+      WHEN 'vitamin e' THEN 'Vitamin E (alpha-tocopherol)'
+      WHEN 'vitamin k' THEN 'Vitamin K (phylloquinone)'
+      WHEN 'zinc' THEN 'Zinc'
+      ELSE NULL
+    END AS standard_nutrient_name
+  FROM
+    health_stats.diet_daily_nutrients
+),
+
+food_nutrients_per_100g AS (
+  SELECT
+    main_food_description,
+    nutrient_description,
+    -- Calculate total nutrient per 100g of finished food
+    SUM((SAFE_CAST(ingredient_weight_g AS FLOAT64) / 100.0) * SAFE_CAST(nutrient_value AS FLOAT64)) AS nutrient_per_100g
+  FROM
+    health_stats.diet_nutritional_data_usda
+  WHERE
+    main_food_description IS NOT NULL
+    AND nutrient_description IS NOT NULL
+  GROUP BY
+    1, 2
+),
+
+daily_consumption AS (
+  SELECT
+    DATE(SAFE.PARSE_TIMESTAMP('%Y-%m-%d', dl.date)) AS record_date,
+    fn.nutrient_description,
+    -- Calculate actual consumed nutrient based on food weight logged
+    SUM((COALESCE(SAFE_CAST(dl.grams AS FLOAT64), 100.0) / 100.0) * fn.nutrient_per_100g) AS daily_consumed
+  FROM
+    health_stats.diet_logs AS dl
+  JOIN
+    food_nutrients_per_100g AS fn ON dl.item = fn.main_food_description
+  WHERE
+    dl.date IS NOT NULL
+  GROUP BY
+    1, 2
+),
+
+base_metrics AS (
+  SELECT
+    dc.record_date,
+    dc.nutrient_description AS nutrient_name,
+    
+    -- Hierarchical Categorization
+    CASE
+      WHEN dc.nutrient_description IN ('Protein', 'Total Fat', 'Fatty acids, total saturated', 'Carbohydrate', 'Sugars, total', 'Fiber, total dietary') THEN 'Macronutrient'
+      WHEN dc.nutrient_description IN ('Water') THEN 'Water'
+      WHEN dc.nutrient_description IN ('Cholesterol', 'Choline, total') THEN 'Other Core Metric'
+      ELSE 'Micronutrient'
+    END AS nutrient_category,
+
+    CASE
+      WHEN dc.nutrient_description IN ('Protein', 'Total Fat', 'Carbohydrate', 'Water') THEN TRUE
+      ELSE FALSE
+    END AS is_parent,
+
+    CASE
+      WHEN dc.nutrient_description = 'Fatty acids, total saturated' THEN 'Total Fat'
+      WHEN dc.nutrient_description IN ('Sugars, total', 'Fiber, total dietary') THEN 'Carbohydrate'
+      ELSE NULL
+    END AS parent_nutrient,
+
+    ROUND(dc.daily_consumed, 4) AS daily_consumed_value,
+    ROUND(tm.target_value, 2) AS target_value,
+    tm.measurement_unit
+  FROM
+    daily_consumption AS dc
+  LEFT JOIN
+    target_mapping AS tm ON dc.nutrient_description = tm.standard_nutrient_name
+)
+
+SELECT
+  *,
+  -- Progress Percentage (Daily)
+  CASE
+    WHEN target_value IS NOT NULL AND target_value > 0 
+    THEN ROUND((daily_consumed_value / target_value) * 100.0, 2)
+    ELSE NULL
+  END AS percent_daily_value_achieved,
+
+  -- --- Week-to-Date (WTD) Metrics ---
+  ROUND(
+    SUM(daily_consumed_value) OVER(
+      PARTITION BY DATE_TRUNC(record_date, WEEK(MONDAY)), nutrient_name 
+      ORDER BY record_date ASC
+    ), 4
+  ) AS wtd_consumed_value,
+  
+  ROUND(
+    (DATE_DIFF(record_date, DATE_TRUNC(record_date, WEEK(MONDAY)), DAY) + 1) * target_value, 2
+  ) AS wtd_target_value,
+
+  ROUND(7 * target_value, 2) AS full_weekly_target,
+
+  ROUND(
+    SAFE_DIVIDE(
+      SUM(daily_consumed_value) OVER(
+        PARTITION BY DATE_TRUNC(record_date, WEEK(MONDAY)), nutrient_name 
+        ORDER BY record_date ASC
+      ),
+      (DATE_DIFF(record_date, DATE_TRUNC(record_date, WEEK(MONDAY)), DAY) + 1) * target_value
+    ) * 100.0, 2
+  ) AS wtd_percent_achieved,
+
+  -- --- Month-to-Date (MTD) Metrics ---
+  ROUND(
+    SUM(daily_consumed_value) OVER(
+      PARTITION BY DATE_TRUNC(record_date, MONTH), nutrient_name 
+      ORDER BY record_date ASC
+    ), 4
+  ) AS mtd_consumed_value,
+
+  ROUND(
+    EXTRACT(DAY FROM record_date) * target_value, 2
+  ) AS mtd_target_value,
+
+  ROUND(
+    EXTRACT(DAY FROM LAST_DAY(record_date)) * target_value, 2
+  ) AS full_monthly_target,
+
+  ROUND(
+    SAFE_DIVIDE(
+      SUM(daily_consumed_value) OVER(
+        PARTITION BY DATE_TRUNC(record_date, MONTH), nutrient_name 
+        ORDER BY record_date ASC
+      ),
+      EXTRACT(DAY FROM record_date) * target_value
+    ) * 100.0, 2
+  ) AS mtd_percent_achieved
+
+FROM
+  base_metrics
+ORDER BY
+  record_date DESC,
+  nutrient_category,
+  is_parent DESC,
+  nutrient_name

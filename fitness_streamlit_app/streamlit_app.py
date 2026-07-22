@@ -55,7 +55,17 @@ ALLOWED_EXERCISES = [
     'toe touch',
     'triceps_stretch',
     'uttanasana_stretch',
-    'weight'
+    'weight',
+    'bench press (upper body)',
+    'squats (lower body)',
+    'deadlift (lower body)',
+    'overhead press (upper body)',
+    'barbell curl (arms)',
+    'hiking',
+    'running',
+    'cycling',
+    'swimming',
+    'shootaround (basketball)'
 ]
 
 # --- Streamlit Page Configuration ---
@@ -454,6 +464,9 @@ with st.container(border=True): # Use a container for better visual grouping and
         df = pd.DataFrame(exercises_data)
         df['record_date'] = pd.to_datetime(df['record_date'])
         df = df.sort_values(by=['record_date', 'id'], ascending=[False, False])
+        # Reorder columns: id (will be index), exercise, record_date, then other columns
+        cols_order = ['id', 'exercise', 'record_date'] + [col for col in df.columns if col not in ['id', 'exercise', 'record_date']]
+        df = df[[col for col in cols_order if col in df.columns]]
         st.dataframe(df.set_index('id'), use_container_width=True) # use_container_width for better fit
 
         st.markdown("<h3>delete exercise record by id</h3>", unsafe_allow_html=True) # Changed to lowercase
@@ -498,6 +511,9 @@ with st.container(border=True): # Use a container for better visual grouping and
         diet_df = pd.DataFrame(diet_data)
         diet_df['record_date'] = pd.to_datetime(diet_df['record_date'])
         diet_df = diet_df.sort_values(by=['record_date', 'id'], ascending=[False, False])
+        # Reorder columns: id (will be index), item, record_date, then other columns
+        cols_order = ['id', 'item', 'record_date'] + [col for col in diet_df.columns if col not in ['id', 'item', 'record_date']]
+        diet_df = diet_df[[col for col in cols_order if col in diet_df.columns]]
         st.dataframe(diet_df.set_index('id'), use_container_width=True)
 
         st.markdown("<h3>delete diet record by id</h3>", unsafe_allow_html=True)

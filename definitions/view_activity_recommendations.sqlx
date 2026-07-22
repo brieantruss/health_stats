@@ -1,0 +1,233 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_activity_recommendations"
+}
+
+# activity_recommendations
+
+WITH recent_activities AS (
+  SELECT
+    LOWER(TRIM(exercise)) AS exercise_name,
+    COUNT(*) AS times_done_last_14_days,
+    MAX(record_date) AS last_done_date
+  FROM
+    health_stats.exercises
+  WHERE
+    SAFE.PARSE_DATE('%Y-%m-%d', record_date) >= DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)
+  GROUP BY
+    1
+),
+
+forecast_scored AS (
+  SELECT
+    f.date AS forecast_date,
+    SAFE_CAST(f.temp AS FLOAT64) AS temp,
+    SAFE_CAST(f.temp_max AS FLOAT64) AS temp_max,
+    SAFE_CAST(f.temp_min AS FLOAT64) AS temp_min,
+    SAFE_CAST(f.precip_prob AS FLOAT64) AS precip_prob,
+    f.conditions,
+    SAFE_CAST(f.wind_speed AS FLOAT64) AS wind_speed,
+    COALESCE(SAFE_CAST(f.aqi AS INT64), 50) AS aqi,
+    
+    -- --- Outdoor Cardio Feasibility Scores (0 to 100) ---
+    -- Hiking: perfect clear/partially cloudy, pleasant temp, low wind, good AQI
+    CASE
+      WHEN SAFE_CAST(f.precip_prob AS FLOAT64) > 30.0 OR COALESCE(SAFE_CAST(f.aqi AS INT64), 50) > 100 OR SAFE_CAST(f.temp_max AS FLOAT64) > 32.0 OR SAFE_CAST(f.temp_min AS FLOAT64) < 5.0 THEN 10 -- Awful hiking conditions
+      ELSE ROUND(100.0 - (SAFE_CAST(f.precip_prob AS FLOAT64) * 1.5) - (ABS(SAFE_CAST(f.temp AS FLOAT64) - 20.0) * 2.0) - (SAFE_CAST(f.wind_speed AS FLOAT64) * 0.5) - (CASE WHEN COALESCE(SAFE_CAST(f.aqi AS INT64), 50) > 50 THEN (COALESCE(SAFE_CAST(f.aqi AS INT64), 50) - 50) * 0.5 ELSE 0 END), 1)
+    END AS hiking_score,
+
+    -- Running: decent temp (cooler is better), precip under 40%
+    CASE
+      WHEN SAFE_CAST(f.precip_prob AS FLOAT64) > 50.0 OR COALESCE(SAFE_CAST(f.aqi AS INT64), 50) > 120 OR SAFE_CAST(f.temp_max AS FLOAT64) > 30.0 OR SAFE_CAST(f.temp_min AS FLOAT64) < 0.0 THEN 10
+      ELSE ROUND(100.0 - (SAFE_CAST(f.precip_prob AS FLOAT64) * 1.2) - (ABS(SAFE_CAST(f.temp AS FLOAT64) - 14.0) * 2.5) - (SAFE_CAST(f.wind_speed AS FLOAT64) * 0.4), 1)
+    END AS running_score,
+
+    -- Cycling: wind is the biggest enemy, precip under 20%
+    CASE
+      WHEN SAFE_CAST(f.precip_prob AS FLOAT64) > 20.0 OR COALESCE(SAFE_CAST(f.aqi AS INT64), 50) > 100 OR SAFE_CAST(f.wind_speed AS FLOAT64) > 30.0 OR SAFE_CAST(f.temp_min AS FLOAT64) < 8.0 THEN 10
+      ELSE ROUND(100.0 - (SAFE_CAST(f.precip_prob AS FLOAT64) * 2.5) - (ABS(SAFE_CAST(f.temp AS FLOAT64) - 18.0) * 1.8) - (SAFE_CAST(f.wind_speed AS FLOAT64) * 1.5), 1)
+    END AS cycling_score,
+
+    -- --- Outdoor Alternative/Active Sport Scores ---
+    -- Swimming: loves high temperatures (> 25 C is pleasant)
+    CASE
+      WHEN SAFE_CAST(f.temp_max AS FLOAT64) < 22.0 OR SAFE_CAST(f.precip_prob AS FLOAT64) > 40.0 OR COALESCE(SAFE_CAST(f.aqi AS INT64), 50) > 120 THEN 10
+      ELSE ROUND(50.0 + (SAFE_CAST(f.temp_max AS FLOAT64) * 1.5) - (SAFE_CAST(f.precip_prob AS FLOAT64) * 0.8), 1)
+    END AS swimming_score,
+
+    -- Shootarounds (Basketball): clear outdoor court or general indoor
+    CASE
+      WHEN SAFE_CAST(f.precip_prob AS FLOAT64) > 30.0 OR SAFE_CAST(f.wind_speed AS FLOAT64) > 25.0 OR COALESCE(SAFE_CAST(f.aqi AS INT64), 50) > 100 THEN 20
+      ELSE ROUND(90.0 - (SAFE_CAST(f.precip_prob AS FLOAT64) * 1.0) - (ABS(SAFE_CAST(f.temp AS FLOAT64) - 20.0) * 1.5), 1)
+    END AS shootaround_score
+  FROM
+    health_stats.weather_forecast AS f
+),
+
+recommendations_unpivoted AS (
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Hiking' AS recommended_activity,
+    'Outdoor Cardio' AS activity_category,
+    hiking_score AS feasibility_score,
+    'Explore the trails while the weather and air quality are pleasant.' AS reasoning
+  FROM forecast_scored
+  
+  UNION ALL
+  
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Running' AS recommended_activity,
+    'Outdoor Cardio' AS activity_category,
+    running_score AS feasibility_score,
+    'Great cooler temperatures for outdoor road running.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+  
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Cycling' AS recommended_activity,
+    'Outdoor Cardio' AS activity_category,
+    cycling_score AS feasibility_score,
+    'Perfect low-wind weather for a road or trail cycling session.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+  
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Swimming' AS recommended_activity,
+    'Outdoor Sport' AS activity_category,
+    swimming_score AS feasibility_score,
+    'Excellent hot temperature for a swim session.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+  
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Shootaround (Basketball)' AS recommended_activity,
+    'Outdoor Sport' AS activity_category,
+    shootaround_score AS feasibility_score,
+    'Outdoor courts are clear and wind is pleasant.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+  
+  -- Indoor Lifts / Strength (Slightly boosted when weather is bad!)
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Bench Press (Upper Body)' AS recommended_activity,
+    'Indoor Strength' AS activity_category,
+    CASE WHEN precip_prob > 40.0 OR aqi > 100 THEN 95.0 ELSE 75.0 END AS feasibility_score,
+    'Perfect day to hit the weights indoors and focus on strength.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Squats (Lower Body)' AS recommended_activity,
+    'Indoor Strength' AS activity_category,
+    CASE WHEN precip_prob > 40.0 OR aqi > 100 THEN 95.0 ELSE 75.0 END AS feasibility_score,
+    'Great day to focus on indoor lower body compound lifts.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+
+  -- Active Recovery (Always a great backup choice!)
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Active Stretching / Yoga' AS recommended_activity,
+    'Active Recovery' AS activity_category,
+    80.0 AS feasibility_score,
+    'Keep your joints mobile and active-recover from the past days.' AS reasoning
+  FROM forecast_scored
+
+  UNION ALL
+
+  SELECT
+    forecast_date,
+    temp,
+    precip_prob,
+    conditions,
+    aqi,
+    'Stretching & Mobility' AS recommended_activity,
+    'Active Recovery' AS activity_category,
+    80.0 AS feasibility_score,
+    'Low-intensity active recovery to keep muscles aligned.' AS reasoning
+  FROM forecast_scored
+),
+
+ranked_recommendations AS (
+  SELECT
+    u.forecast_date,
+    u.temp AS forecast_temp_c,
+    u.precip_prob AS forecast_rain_probability_percent,
+    u.conditions AS forecast_conditions,
+    u.aqi AS forecast_aqi,
+    u.recommended_activity,
+    u.activity_category,
+    u.feasibility_score,
+    u.reasoning,
+    -- Adjust feasibility score dynamically based on user's recent history to avoid repeating the same sport endlessly
+    (u.feasibility_score - COALESCE(ra.times_done_last_14_days * 5.0, 0)) AS adjusted_score,
+    ROW_NUMBER() OVER(PARTITION BY u.forecast_date ORDER BY (u.feasibility_score - COALESCE(ra.times_done_last_14_days * 5.0, 0)) DESC) AS recommendation_rank
+  FROM
+    recommendations_unpivoted AS u
+  LEFT JOIN
+    recent_activities AS ra ON LOWER(u.recommended_activity) = ra.exercise_name
+)
+
+SELECT
+  forecast_date,
+  forecast_temp_c,
+  forecast_rain_probability_percent,
+  forecast_conditions,
+  forecast_aqi,
+  recommended_activity,
+  activity_category,
+  ROUND(adjusted_score, 1) AS recommendation_score,
+  reasoning,
+  recommendation_rank
+FROM
+  ranked_recommendations
+WHERE
+  recommendation_rank <= 5 -- Show exactly top 5 recommendations per day!
+ORDER BY
+  forecast_date ASC,
+  recommendation_rank ASC
