@@ -1,0 +1,46 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_latest_header_stats"
+}
+
+# latest_header_stats
+
+WITH latest_weather AS (
+  SELECT
+    local_time,
+    temp AS latest_temp_c,
+    conditions AS latest_conditions,
+    windspeed AS latest_wind_speed_kmh,
+    precip AS latest_precipitation_mm,
+    latlon AS latest_coordinates,
+    city AS latest_city,
+    state_province AS latest_state_province,
+    country AS latest_country,
+    flag AS latest_country_flag
+  FROM
+    health_stats.view_weather
+  ORDER BY
+    datetime DESC
+  LIMIT 1
+),
+
+latest_aqi AS (
+  SELECT
+    aqi AS latest_aqi,
+    pm2_5 AS latest_pm2_5,
+    pm10 AS latest_pm10
+  FROM
+    health_stats.view_weather_aqi
+  ORDER BY
+    datetime DESC
+  LIMIT 1
+)
+
+SELECT
+  w.*,
+  a.*
+FROM
+  latest_weather AS w
+CROSS JOIN
+  latest_aqi AS a
