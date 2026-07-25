@@ -1,0 +1,21 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_geocoded_locations"
+}
+
+# geocoded_locations
+
+SELECT DISTINCT
+  latitude,
+  longitude,
+  city,
+  normalized_city,
+  country,
+  DMS,
+  url,
+  flag,
+  timezone,
+  CONCAT(CAST(ROUND(latitude, 4) AS STRING), ", ", CAST(ROUND(longitude, 4) AS STRING)) AS latlon_key
+FROM
+  health_stats.geocoded_locations

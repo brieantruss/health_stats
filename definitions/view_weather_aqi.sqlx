@@ -1,0 +1,17 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_weather_aqi"
+}
+
+# weather_aqi
+
+SELECT DISTINCT
+  w.*,
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%S', w.datetime), -- Try T-separated format first
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', w.datetime)  -- Fallback to space-separated format
+  ) AS utc_time,
+  CONCAT(CAST(ROUND(w.latitude, 2) AS STRING), ", ", CAST(ROUND(w.longitude, 2) AS STRING)) AS latlon
+FROM
+  health_stats.weather_aqi AS w

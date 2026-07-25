@@ -6,7 +6,10 @@ from google.oauth2 import service_account
 from googleapiclient.http import MediaFileUpload
 
 # --- Configuration paths ---
-GDRIVE_CREDENTIALS_PATH = "/home/briean/dev/backups/config/gdrive_credentials.json"
+GDRIVE_CREDENTIALS_PATHS = [
+    "/home/briean/.gcp/gdrive_credentials.json",
+    "/home/briean/dev/backups/config/gdrive_credentials.json"
+]
 REPORTS_FOLDER_ID = "1C5xjMCKFARv2gT0V-oLbaCNWEWkE4CMx" # Your personal backups reports GDrive folder!
 
 # Configure logging
@@ -14,12 +17,18 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def get_gdrive_service():
     """Initializes and returns the Google Drive API service client."""
-    if not os.path.exists(GDRIVE_CREDENTIALS_PATH):
-        logging.error(f"❌ Google Drive credentials not found at {GDRIVE_CREDENTIALS_PATH}.")
+    creds_path = None
+    for path in GDRIVE_CREDENTIALS_PATHS:
+        if os.path.exists(path):
+            creds_path = path
+            break
+            
+    if not creds_path:
+        logging.error(f"❌ Google Drive credentials not found at any expected paths: {GDRIVE_CREDENTIALS_PATHS}.")
         return None
     try:
         creds = service_account.Credentials.from_service_account_file(
-            GDRIVE_CREDENTIALS_PATH, 
+            creds_path, 
             scopes=["https://www.googleapis.com/auth/drive"]
         )
         return build("drive", "v3", credentials=creds)

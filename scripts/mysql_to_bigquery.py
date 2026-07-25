@@ -90,7 +90,8 @@ TABLES_TO_SYNC = [
     "main_food_descriptions",
     "ingredient_nutrients",
     "weather_aqi",
-    "weather_forecast"
+    "weather_forecast",
+    "geocoded_locations"
 ]
 
 # Table name mapping dictionary to match clean naming conventions in BigQuery

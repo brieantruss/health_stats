@@ -6,16 +6,46 @@ config {
 
 # weather
 
-SELECT DISTINCT
-    w.*,
-    TIMESTAMP_ADD(
-        COALESCE(
-            SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%S', w.datetime), -- Try T-separated format first
-            SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', w.datetime)  -- Fallback to space-separated format
-        ),
-        -- FIX: Cast to FLOAT64 first to handle decimal strings like '2.0', then cast to INT64
-        INTERVAL CAST(SAFE_CAST(w.tzoffset AS FLOAT64) AS INT64) HOUR
-    ) AS local_time,
-    CONCAT(CAST(ROUND(w.latitude, 2) AS STRING), ", ", CAST(ROUND(w.longitude, 2) AS STRING)) AS latlon
-FROM
+WITH weather_parsed AS (
+  SELECT DISTINCT
+      w.*,
+      w.hourly_humidity AS humidity,
+      TIMESTAMP_ADD(
+          COALESCE(
+              SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%S', w.datetime), -- Try T-separated format first
+              SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', w.datetime)  -- Fallback to space-separated format
+          ),
+          -- FIX: Cast to FLOAT64 first to handle decimal strings like '2.0', then cast to INT64
+          INTERVAL CAST(SAFE_CAST(w.tzoffset AS FLOAT64) AS INT64) HOUR
+      ) AS local_time,
+      CONCAT(CAST(ROUND(w.latitude, 2) AS STRING), ", ", CAST(ROUND(w.longitude, 2) AS STRING)) AS latlon,
+      CONCAT(CAST(ROUND(w.latitude, 4) AS STRING), ", ", CAST(ROUND(w.longitude, 4) AS STRING)) AS latlon_key
+  FROM
     health_stats.weather AS w
+),
+
+geo_parsed AS (
+  SELECT DISTINCT
+    latitude,
+    longitude,
+    city,
+    normalized_city,
+    country,
+    flag,
+    timezone,
+    CONCAT(CAST(ROUND(latitude, 4) AS STRING), ", ", CAST(ROUND(longitude, 4) AS STRING)) AS latlon_key
+  FROM
+    health_stats.geocoded_locations
+)
+
+SELECT
+  w.* EXCEPT(latlon_key),
+  g.city,
+  COALESCE(g.normalized_city, g.city) AS state_province,
+  g.country,
+  g.flag,
+  g.timezone AS geo_timezone
+FROM
+  weather_parsed AS w
+LEFT JOIN
+  geo_parsed AS g ON w.latlon_key = g.latlon_key
