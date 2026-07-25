@@ -3,6 +3,8 @@ import json
 import logging
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.http import MediaFileUpload
 
 # --- Configuration paths ---
@@ -15,8 +17,28 @@ REPORTS_FOLDER_ID = "1C5xjMCKFARv2gT0V-oLbaCNWEWkE4CMx" # Your personal backups 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+USER_TOKEN_PATH = "/home/briean/.gcp/gdrive_user_token.json"
+CLIENT_SECRETS_PATH = "/home/briean/.gcp/client_secrets.json"
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+
 def get_gdrive_service():
     """Initializes and returns the Google Drive API service client."""
+    # 1. Try to load personal OAuth 2.0 User credentials first
+    if os.path.exists(USER_TOKEN_PATH):
+        try:
+            logging.info("🔑 Attempting to authenticate using Google Drive User Credentials (OAuth 2.0)...")
+            creds = Credentials.from_authorized_user_file(USER_TOKEN_PATH, SCOPES)
+            if creds and creds.expired and creds.refresh_token:
+                logging.info("🔄 Google Drive User token expired, refreshing...")
+                creds.refresh(Request())
+                with open(USER_TOKEN_PATH, "w") as token_file:
+                    token_file.write(creds.to_json())
+            return build("drive", "v3", credentials=creds)
+        except Exception as e:
+            logging.error(f"⚠️ User OAuth authentication failed, falling back: {e}")
+
+    # 2. Fall back to Google Service Account credentials
+    logging.info("💼 User token not found or failed, falling back to Service Account...")
     creds_path = None
     for path in GDRIVE_CREDENTIALS_PATHS:
         if os.path.exists(path):
@@ -29,7 +51,7 @@ def get_gdrive_service():
     try:
         creds = service_account.Credentials.from_service_account_file(
             creds_path, 
-            scopes=["https://www.googleapis.com/auth/drive"]
+            scopes=SCOPES
         )
         return build("drive", "v3", credentials=creds)
     except Exception as e:

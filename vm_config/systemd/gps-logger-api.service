@@ -5,7 +5,7 @@ After=network.target mysql.service
 [Service]
 User=briean
 WorkingDirectory=/home/briean/health_stats/gps_logger_app
-ExecStart=/usr/bin/gunicorn --workers 1 --bind 0.0.0.0:5000 app:app
+ExecStart=/home/briean/health_stats/.venv/bin/gunicorn --workers 1 --bind 0.0.0.0:5000 app:app
 Restart=always
 RestartSec=5
 
