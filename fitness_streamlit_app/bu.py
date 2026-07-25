@@ -16,7 +16,9 @@ ALLOWED_EXERCISES = [
     'neck_stretch', 'prone_chest_opener', 'pull_ups_overhand', 'pull_ups_palms_in',
     'pull_ups_underhand', 'push_ups__fingers', 'push_ups_decline', 'push_ups_handstand',
     'push_ups_wide', 'quad_stretch', 'scissor_kicks', 'shots', 'shoulder_stretch', 'side_stretch',
-    'spinal_twist_stretch', 'toe touch', 'triceps_stretch', 'uttanasana_stretch', 'weight'
+    'spinal_twist_stretch', 'toe touch', 'triceps_stretch', 'uttanasana_stretch', 'weight',
+    'bench press (upper body)', 'squats (lower body)', 'deadlift (lower body)', 'overhead_press (upper body)',
+    'barbell curl (arms)', 'hiking', 'running', 'cycling', 'swimming', 'shootaround (basketball)'
 ]
 
 # --- Streamlit Page Configuration ---
@@ -372,6 +374,9 @@ with st.container(border=True): # Use a container for better visual grouping and
         df = pd.DataFrame(exercises_data)
         df['record_date'] = pd.to_datetime(df['record_date'])
         df = df.sort_values(by=['record_date', 'id'], ascending=[False, False])
+        # Reorder columns: id (will be index), exercise, record_date, then other columns
+        cols_order = ['id', 'exercise', 'record_date'] + [col for col in df.columns if col not in ['id', 'exercise', 'record_date']]
+        df = df[[col for col in cols_order if col in df.columns]]
         st.dataframe(df.set_index('id'), use_container_width=True) # use_container_width for better fit
 
         st.markdown("<h3>delete exercise record by id</h3>", unsafe_allow_html=True) # Changed to lowercase

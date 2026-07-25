@@ -252,8 +252,14 @@ def location_flow():
     run_etl_step("transform_locations.py", raw_dir, processed_dir)
     # 3. Load
     run_etl_step("load_locations.py", processed_dir)
+    # 3.5 Geocode New Coordinates
+    run_etl_step("extract_and_load_reverse_geocoding.py")
     # 4. Fetch Weather Data (dependent on locations table being loaded)
     run_etl_step("extract_and_load_weather.py")
+    # 5. Fetch Outdoor AQI Data
+    run_etl_step("extract_and_load_aqi.py")
+    # 6. Fetch 7-day Weather & AQI Forecast
+    run_etl_step("extract_and_load_forecast.py")
 
 # Unified hourly flow that runs all 11 standard flows sequentially (one-by-one)
 @flow(name="hs_hourly_etl")

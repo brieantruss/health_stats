@@ -63,7 +63,7 @@ logging.getLogger().addHandler(db_handler)
 PROJECT_ID = "my-data-479716"
 DATASET_ID = "health_stats"
 
-# List of MySQL tables to sync to BigQuery as 'mysql_<table_name>'
+# List of MySQL tables to sync to BigQuery
 TABLES_TO_SYNC = [
     "blood_pressure",
     "cycling",
@@ -84,8 +84,26 @@ TABLES_TO_SYNC = [
     "walking",
     "weather",
     "drive_file_sync_history",
-    "pipeline_execution_logs"
+    "pipeline_execution_logs",
+    "nutritional_data",
+    "daily_nutrients",
+    "main_food_descriptions",
+    "ingredient_nutrients",
+    "weather_aqi",
+    "weather_forecast",
+    "geocoded_locations"
 ]
+
+# Table name mapping dictionary to match clean naming conventions in BigQuery
+TABLE_NAME_MAPPING = {
+    "diet": "diet_logs",
+    "daily_nutrients": "diet_daily_nutrients",
+    "food_descriptions": "diet_food_descriptions_usda",
+    "food_ingredients": "diet_food_ingredients_usda",
+    "nutritional_data": "diet_nutritional_data_usda",
+    "ingredient_nutrients": "diet_ingredient_nutrients_usda",
+    "main_food_descriptions": "diet_main_food_descriptions_usda"
+}
 
 def get_bigquery_type(col_name):
     """
@@ -94,10 +112,10 @@ def get_bigquery_type(col_name):
     """
     col_lower = col_name.lower()
     # Map key numerical metrics to integers
-    if col_lower in ["steps", "heart_rate", "bp_systolic", "bp_diastolic", "oxygen_saturation", "swimming_laps", "vo2max", "count", "id"]:
+    if col_lower in ["steps", "heart_rate", "bp_systolic", "bp_diastolic", "oxygen_saturation", "swimming_laps", "vo2max", "count", "id", "fdc_id", "aqi"] or col_lower.endswith("_code") or col_lower.endswith("_num") or col_lower.endswith("_number") or col_lower.endswith("_year") or col_lower.endswith("_acquisition"):
         return "INTEGER"
     # Map GPS coordinates and weather metrics to floats
-    elif col_lower in ["latitude", "longitude", "altitude", "speed", "pace", "distance", "temperature", "humidity"]:
+    elif col_lower in ["latitude", "longitude", "altitude", "speed", "pace", "distance", "temperature", "humidity", "nutrient_value", "pm2_5", "pm10", "ozone", "nitrogen_dioxide", "carbon_monoxide", "sulphur_dioxide"] or col_lower.endswith("_g") or "percent" in col_lower:
         return "FLOAT"
     # Fallback to string for dates, times, updates, and text details
     else:
@@ -191,8 +209,8 @@ def sync_mysql_to_bigquery():
                         
                 logging.info(f"Streaming write complete. Total rows exported: {row_count}")
                 
-                # Define BigQuery target table
-                bq_table_id = table_name
+                # Define BigQuery target table with mapped names
+                bq_table_id = TABLE_NAME_MAPPING.get(table_name, table_name)
                 table_ref = bq_client.dataset(DATASET_ID).table(bq_table_id)
                 
                 # Generate explicit full schema mapping to prevent parser conflicts
@@ -217,7 +235,7 @@ def sync_mysql_to_bigquery():
                     job = bq_client.load_table_from_file(source_file, table_ref, job_config=job_config)
                     job.result()  # Wait for the load job to complete
                     
-                logging.info(f"Successfully synced table '{table_name}' to BigQuery!")
+                logging.info(f"Successfully synced table '{table_name}' to BigQuery as '{bq_table_id}'!")
                 
             except Exception as e:
                 logging.error(f"Failed to sync table '{table_name}': {e}")

@@ -1,0 +1,96 @@
+config {
+  type: "view",
+  schema: "health_stats",
+  name: "view_diet_recommendations"
+}
+
+# diet_recommendations
+
+WITH top_deficiencies AS (
+  SELECT
+    nutrient_name,
+    nutrient_category,
+    is_parent,
+    parent_nutrient,
+    measurement_unit,
+    AVG(daily_consumed_value) AS avg_daily_consumed,
+    AVG(target_value) AS target_value,
+    AVG(percent_daily_value_achieved) AS avg_percent_achieved,
+    ROW_NUMBER() OVER(ORDER BY AVG(percent_daily_value_achieved) ASC) AS deficiency_rank
+  FROM
+    health_stats.view_daily_nutrient_tracking
+  WHERE
+    -- Look at the last 7 active days of logging history to guarantee recommendations are always populated
+    record_date >= DATE_SUB((SELECT COALESCE(MAX(record_date), CURRENT_DATE()) FROM health_stats.view_daily_nutrient_tracking), INTERVAL 7 DAY)
+    AND target_value IS NOT NULL
+    AND percent_daily_value_achieved IS NOT NULL
+  GROUP BY
+    1, 2, 3, 4, 5
+  HAVING
+    AVG(percent_daily_value_achieved) < 100.0
+),
+
+food_nutrient_densities AS (
+  SELECT
+    main_food_description,
+    nutrient_description,
+    SUM((SAFE_CAST(ingredient_weight_g AS FLOAT64) / 100.0) * SAFE_CAST(nutrient_value AS FLOAT64)) AS nutrient_per_100g
+  FROM
+    health_stats.diet_nutritional_data_usda
+  WHERE
+    main_food_description IS NOT NULL
+    AND nutrient_description IS NOT NULL
+    
+    -- Filter out obscure, industrial, raw, or baby-food items to keep recommendations practical
+    AND LOWER(main_food_description) NOT LIKE '%babyfood%'
+    AND LOWER(main_food_description) NOT LIKE '%infant%'
+    AND LOWER(main_food_description) NOT LIKE '%formula%'
+    AND LOWER(main_food_description) NOT LIKE '%industrial%'
+    AND LOWER(main_food_description) NOT LIKE '%restaurant%'
+    AND LOWER(main_food_description) NOT LIKE '%institutional%'
+    AND LOWER(main_food_description) NOT LIKE '%fast food%'
+    AND LOWER(main_food_description) NOT LIKE '%raw%'
+    AND LOWER(main_food_description) NOT LIKE '%kidney%'
+    AND LOWER(main_food_description) NOT LIKE '%liver%'
+    AND LOWER(main_food_description) NOT LIKE '%gizzard%'
+    AND LOWER(main_food_description) NOT LIKE '%heart,%'
+    AND LOWER(main_food_description) NOT LIKE '%brain,%'
+    AND LOWER(main_food_description) NOT LIKE '%stomach,%'
+  GROUP BY
+    1, 2
+),
+
+ranked_recommendations AS (
+  SELECT
+    td.nutrient_name,
+    td.nutrient_category,
+    td.measurement_unit,
+    ROUND(td.avg_percent_achieved, 2) AS avg_7day_achievement_percent,
+    ROUND(td.target_value, 2) AS daily_target_value,
+    fnd.main_food_description AS recommended_food,
+    ROUND(fnd.nutrient_per_100g, 4) AS nutrient_density_per_100g,
+    ROW_NUMBER() OVER(PARTITION BY td.nutrient_name ORDER BY fnd.nutrient_per_100g DESC) AS food_density_rank
+  FROM
+    top_deficiencies AS td
+  JOIN
+    food_nutrient_densities AS fnd ON td.nutrient_name = fnd.nutrient_description
+  WHERE
+    td.deficiency_rank <= 3 -- Only focus on the top 3 most deficient nutrients
+)
+
+SELECT
+  nutrient_name,
+  nutrient_category,
+  measurement_unit,
+  avg_7day_achievement_percent,
+  daily_target_value,
+  recommended_food,
+  nutrient_density_per_100g,
+  food_density_rank
+FROM
+  ranked_recommendations
+WHERE
+  food_density_rank <= 5 -- Return top 5 foods for each of your top 3 deficient nutrients
+ORDER BY
+  avg_7day_achievement_percent ASC,
+  food_density_rank ASC
