@@ -40,7 +40,7 @@ def generate_weather_aqi_report():
           `{PROJECT_ID}.health_stats.view_activity_recommendations`
         WHERE
           forecast_date = '{today_str}'
-          OR forecast_date = CURRENT_DATE()
+          OR forecast_date = FORMAT_DATE('%Y-%m-%d', CURRENT_DATE())
         ORDER BY
           recommendation_score DESC
         LIMIT 1;

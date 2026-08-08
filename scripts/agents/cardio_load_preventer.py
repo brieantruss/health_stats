@@ -36,7 +36,7 @@ def generate_cardio_load_report():
         FROM
           `{PROJECT_ID}.health_stats.view_running`
         WHERE
-          PARSE_DATE('%Y-%m-%d', SPLIT(activity_date, ' ')[OFFSET(0)]) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+          PARSE_DATE('%Y.%m.%d', SPLIT(activity_date, ' ')[OFFSET(0)]) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
         ORDER BY
           activity_date DESC;
     """
@@ -62,7 +62,7 @@ def generate_cardio_load_report():
         # Parse the activity date string cleanly (handling potential timestamps)
         date_part = r.activity_date.split(' ')[0]
         try:
-            run_date = datetime.strptime(date_part, '%Y-%m-%d').date()
+            run_date = datetime.strptime(date_part, '%Y.%m.%d').date()
         except Exception:
             continue
             

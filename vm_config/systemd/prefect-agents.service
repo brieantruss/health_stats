@@ -1,0 +1,15 @@
+[Unit]
+Description=Prefect Agents Daemon for Health Stats
+After=network.target mysql.service prefect-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/briean/health_stats
+ExecStart=/home/briean/health_stats/.venv/bin/python3 scripts/agents/orchestrate_agents.py --deploy
+Restart=always
+RestartSec=10
+Environment=PREFECT_API_URL=http://localhost:4200/api
+
+[Install]
+WantedBy=multi-user.target
