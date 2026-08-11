@@ -7,7 +7,7 @@ from prefect import flow, task
 
 # Append current directory to path for relative imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from gdrive_uploader import upload_report_to_gdrive
+from gdrive_uploader import upload_report_to_gdrive, append_to_gsheet
 
 # --- Configuration ---
 PROJECT_ID = "my-data-479716"
@@ -157,6 +157,17 @@ REM sleep is the phase where your brain consolidates memories, processes emotion
         f.write(report_content)
     
     logging.info(f"Compiled local sleep report at: {report_file_path}")
+
+    # Append to Google Sheet if data was found
+    if total_days > 0:
+        try:
+            sheet_name = "Weekly Sleep Stage & Deep Recovery Optimizer"
+            headers = ["Date", "Avg Sleep Duration (mins)", "Avg Deep Sleep (mins)", "Deep Sleep (%)", "Deep Sleep Rating", "Avg REM Sleep (mins)", "REM Sleep (%)", "REM Sleep Rating", "Avg Light Sleep (mins)", "Avg Awake Time (mins)"]
+            row_data = [today_str, round(avg_total, 1), round(avg_deep, 1), round(deep_percentage, 1), deep_rating, round(avg_rem, 1), round(rem_percentage, 1), rem_rating, round(avg_light, 1), round(avg_awake, 1)]
+            append_to_gsheet(sheet_name, headers, row_data)
+        except Exception as e:
+            logging.error(f"Failed to append sleep data to Google Sheet: {e}")
+
     return report_file_path
 
 @flow(name="sleep_recovery_optimizer_agent_flow")

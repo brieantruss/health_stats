@@ -7,7 +7,7 @@ from prefect import flow, task
 
 # Append current directory to path for relative imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from gdrive_uploader import upload_report_to_gdrive
+from gdrive_uploader import upload_report_to_gdrive, append_to_gsheet
 
 # --- Configuration ---
 PROJECT_ID = "my-data-479716"
@@ -156,6 +156,16 @@ def generate_cardio_load_report():
         f.write(report_content)
     
     logging.info(f"Compiled local report at: {report_file_path}")
+
+    # Append to Google Sheet
+    try:
+        sheet_name = "Daily Cardio Load & Injury Preventer"
+        headers = ["Date", "Acute Load (Last 7 Days Miles)", "Chronic Load (Weekly Avg 28 Days)", "ACWR (Acute-to-Chronic Ratio)", "Workload Zone", "Safety Assessment", "Training Recommendation"]
+        row_data = [today_str, round(acute_miles, 2), round(chronic_weekly_avg, 2), round(acwr, 2), status_zone, safety_status, recommendation]
+        append_to_gsheet(sheet_name, headers, row_data)
+    except Exception as e:
+        logging.error(f"Failed to append cardio data to Google Sheet: {e}")
+
     return report_file_path
 
 @flow(name="cardio_load_preventer_agent_flow")

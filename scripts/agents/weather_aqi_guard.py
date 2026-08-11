@@ -7,7 +7,7 @@ from prefect import flow, task
 
 # Append current directory to path for relative imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from gdrive_uploader import upload_report_to_gdrive
+from gdrive_uploader import upload_report_to_gdrive, append_to_gsheet
 
 # --- Configuration ---
 PROJECT_ID = "my-data-479716"
@@ -119,6 +119,17 @@ Please ensure your daily weather/AQI extraction jobs have run successfully.
         f.write(report_content)
     
     logging.info(f"Compiled local report at: {report_file_path}")
+
+    # Append to Google Sheet if data was found
+    if rows:
+        try:
+            sheet_name = "Daily Weather & AQI Risk Guard"
+            headers = ["Date", "Conditions", "Temperature (C)", "Rain Probability (%)", "AQI", "AQI Status", "Recommended Activity", "Reasoning"]
+            row_data = [r.forecast_date, r.forecast_conditions, r.forecast_temp_c, r.forecast_rain_probability_percent, aqi_val, aqi_status, r.recommended_activity, r.reasoning]
+            append_to_gsheet(sheet_name, headers, row_data)
+        except Exception as e:
+            logging.error(f"Failed to append weather data to Google Sheet: {e}")
+
     return report_file_path
 
 @flow(name="weather_aqi_guard_agent_flow")

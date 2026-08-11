@@ -7,7 +7,7 @@ from prefect import flow, task
 
 # Append current directory to path for relative imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from gdrive_uploader import upload_report_to_gdrive
+from gdrive_uploader import upload_report_to_gdrive, append_to_gsheet
 
 # --- Configuration ---
 PROJECT_ID = "my-data-479716"
@@ -190,6 +190,17 @@ This audit cross-references your synced records from Samsung Health and wearable
         f.write(report_content)
     
     logging.info(f"Compiled local health trend report at: {report_file_path}")
+
+    # Append to Google Sheet if data was found
+    if rows:
+        try:
+            sheet_name = "Weekly Health Trend & Data Integrity Analyst"
+            headers = ["Date", "Current Week Avg Steps", "Previous Week Avg Steps", "Steps Trend", "Current Week Avg HR", "Previous Week Avg HR", "HR Trend", "Current Week Avg Sleep (hrs)", "Previous Week Avg Sleep (hrs)", "Sleep Trend"]
+            row_data = [today_str, round(avg_steps_w1, 1), round(avg_steps_w2, 1), steps_trend, round(avg_hr_w1, 1), round(avg_hr_w2, 1), hr_trend, round(avg_sleep_w1, 2), round(avg_sleep_w2, 2), sleep_trend]
+            append_to_gsheet(sheet_name, headers, row_data)
+        except Exception as e:
+            logging.error(f"Failed to append health trend data to Google Sheet: {e}")
+
     return report_file_path
 
 @flow(name="health_trend_analyst_agent_flow")

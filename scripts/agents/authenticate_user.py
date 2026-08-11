@@ -5,7 +5,10 @@ from google.auth.transport.requests import Request
 
 CLIENT_SECRETS_FILE = "/home/briean/.gcp/client_secrets.json"
 TOKEN_FILE = "/home/briean/.gcp/gdrive_user_token.json"
-SCOPES = ["https://www.googleapis.com/auth/drive"]
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets"
+]
 
 def authenticate_user():
     creds = None
@@ -16,9 +19,14 @@ def authenticate_user():
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            print("Refreshing expired credentials...")
-            creds.refresh(Request())
-        else:
+            try:
+                print("Refreshing expired credentials...")
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"⚠️ Failed to refresh expired token: {e}. Clearing stale credentials and starting a fresh flow.")
+                creds = None
+        
+        if not creds:
             print("Starting new authentication flow...")
             if not os.path.exists(CLIENT_SECRETS_FILE):
                 raise FileNotFoundError(f"Missing {CLIENT_SECRETS_FILE}")

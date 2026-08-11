@@ -8,7 +8,7 @@ from prefect import flow, task
 
 # Append current directory to path for relative imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from gdrive_uploader import upload_report_to_gdrive
+from gdrive_uploader import upload_report_to_gdrive, append_to_gsheet
 
 # --- Configuration ---
 PROJECT_ID = "my-data-479716"
@@ -142,6 +142,16 @@ def save_and_upload_synthesizer_report(report_text):
         f.write(report_text)
         
     logging.info(f"Compiled local Gemini report at: {report_file_path}")
+
+    # Append to Google Sheet
+    try:
+        sheet_name = "Weekly Holistic Wellness & Bio-Synthesizer"
+        headers = ["Date", "Holistic Wellness Report"]
+        row_data = [today_str, report_text]
+        append_to_gsheet(sheet_name, headers, row_data)
+    except Exception as e:
+        logging.error(f"Failed to append Gemini synthesizer data to Google Sheet: {e}")
+
     return report_file_path
 
 # --- Main Flow ---
