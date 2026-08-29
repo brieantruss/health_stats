@@ -87,7 +87,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 if "chat_session" not in st.session_state:
     model = genai.GenerativeModel(
-        model_name="gemini-2.0-flash",
+        model_name="gemini-3.6-flash",
         tools=[get_schema_info, execute_readonly_query],
         system_instruction=(
             "You are Briean's elite health copilot. "

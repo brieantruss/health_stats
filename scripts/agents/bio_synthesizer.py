@@ -95,7 +95,7 @@ def synthesize_with_gemini_llm(data_payload):
     try:
         logging.info("Initializing Google Gemini Pro client...")
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-3.6-flash')
         
         prompt = f"""
         You are Briean's elite, world-class personal health coach, sleep scientist, and cardiovascular expert.
