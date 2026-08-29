@@ -12,7 +12,7 @@ from gdrive_uploader import upload_report_to_gdrive, append_to_gsheet
 # --- Configuration ---
 PROJECT_ID = "my-data-479716"
 KEY_PATH = "/home/briean/.gcp/bigquery-agent-key.json"
-LOCAL_REPORTS_DIR = "/home/briean/dev/health_stats/reports"
+LOCAL_REPORTS_DIR = "/tmp"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -174,6 +174,11 @@ def cardio_load_preventer_flow():
     local_path = generate_cardio_load_report()
     if local_path:
         upload_report_to_gdrive(local_path)
+        try:
+            os.remove(local_path)
+            logging.info(f"Cleaned up temporary local report: {local_path}")
+        except Exception as e:
+            logging.error(f"Failed to delete temporary report {local_path}: {e}")
     logging.info("Daily Cardio Load & Injury Preventer agent run complete!")
 
 if __name__ == "__main__":
