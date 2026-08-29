@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mcp-bigquery-server:
+    build:
+      context: ./mcp_bigquery_server
+      dockerfile: Dockerfile
+    container_name: mcp-bigquery-server
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/bigquery-agent-key.json
+    volumes:
+      - /home/briean/.gcp:/app/credentials:ro
+    ports:
+      - "127.0.0.1:8000:8000" # Only accessible on localhost of host VM for security
+    networks:
+      - health-network
+    restart: unless-stopped
+
+  health-copilot-ui:
+    build:
+      context: ./health_copilot_ui
+      dockerfile: Dockerfile
+    container_name: health-copilot-ui
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/bigquery-agent-key.json
+    volumes:
+      - /home/briean/.gcp:/app/credentials:ro
+    ports:
+      - "8502:8502" # Streamlit dashboard mapped publicly
+    depends_on:
+      - mcp-bigquery-server
+    networks:
+      - health-network
+    restart: unless-stopped
+
+networks:
+  health-network:
+    driver: bridge

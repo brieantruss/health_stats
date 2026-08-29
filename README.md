@@ -121,6 +121,29 @@ A suite of serverless Dataform compilation scripts (`definitions/*.sqlx`) transf
 
 ---
 
+## 🧠 Conversational Health Copilot (Model Context Protocol)
+
+We designed and deployed an end-user facing conversational **Health Copilot** that runs natively in the background of your GCP VM, allowing secure, real-time natural language query execution over your BigQuery data warehouse.
+
+This implementation acts as an enterprise-grade sandbox (mirroring professional Salesforce/CRM-to-BigQuery setups) to demonstrate **Model Context Protocol (MCP)**, a secure, decoupled communication paradigm between large language models and databases.
+
+<p align="center">
+  <img src="docs/images/health_copilot_preview.png" alt="Personal Health Copilot UI" width="90%">
+</p>
+
+### Key Architectural Pillars
+
+*   **Securely Decoupled Database Gateway**:
+    *   **The BigQuery MCP Server** (`/mcp_bigquery_server`): A standalone Python service built using **FastMCP**. It runs securely and privately in your VM background on port `8000`. It is the *only* component that holds GCP credentials or communicates with Google BigQuery, exposing strict read-only analytical query tools (`get_schema_info`, `execute_readonly_query`).
+*   **Conversational Frontend Orchestrator**:
+    *   **The Copilot UI** (`/health_copilot_ui`): A beautiful, dark-themed Streamlit chat dashboard that is hosted on your VM on port `8502` and publicly accessible over the web. It coordinates user inputs, executes Google Gemini 2.0 Flash`s function calls against the local MCP server, and formats responses.
+*   **Dynamic Data Charting Engine**:
+    *   The Streamlit frontend features an automated Markdown parser that intercepts tabular SQL results returned by Gemini, converts them on-the-fly into Pandas DataFrames, and automatically plots interactive line and bar charts (using Altair).
+*   **SQL Audit and Transparency**:
+    *   Each conversational response features a collapsible audit drawer (`🔍 SQL Query Executed`) showing you the precise, raw BigQuery SQL syntax formulated by the AI, making it a powerful educational and debugging environment.
+
+---
+
 ## VM Constraints & Optimizations
 
 Running a full database, orchestration server, and two APIs on a GCP `e2-micro` instance with only 1 GB of physical RAM required several critical performance tuning steps:
