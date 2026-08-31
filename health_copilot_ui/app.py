@@ -76,6 +76,51 @@ with st.sidebar:
     - **`view_scorecard_summary`**: Vitals dashboard metrics.
     """)
 
+    st.divider()
+    st.subheader("📡 Live Stream Status")
+    
+    # Locate the local events DB dynamically
+    db_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "health_events.db"))
+    
+    if os.path.exists(db_file):
+        st.success("🟢 Real-Time Layer: ACTIVE")
+        try:
+            import sqlite3
+            import json
+            conn = sqlite3.connect(db_file)
+            cursor = conn.cursor()
+            
+            # Fetch latest snapshot key-values
+            cursor.execute("SELECT key, value FROM latest_health_snapshot")
+            snapshots = {row[0]: json.loads(row[1]) for row in cursor.fetchall()}
+            conn.close()
+            
+            # Show latest coaching alert / recommendation
+            if "latest_coaching_alert" in snapshots:
+                alert = snapshots["latest_coaching_alert"]
+                st.markdown("##### 💡 Live Coaching Alert")
+                msg = alert.get("message", "")
+                sug = alert.get("suggestion", "")
+                st.info(f"**{msg}**\n\n{sug}")
+                
+            # Show latest state snapshots
+            st.markdown("##### 🕒 Latest Active States")
+            col1, col2 = st.columns(2)
+            with col1:
+                if "latest_workout" in snapshots:
+                    w = snapshots["latest_workout"]
+                    st.metric("Latest Workout", f"{w.get('reps', 0)} reps", w.get("exercise", "workout")[:15])
+            with col2:
+                if "latest_sleep" in snapshots:
+                    s = snapshots["latest_sleep"]
+                    st.metric("Latest Sleep", f"{s.get('total_hours', 0.0)} hrs", "Sleep Summary")
+                
+        except Exception as e:
+            st.error(f"Error reading stream: {e}")
+    else:
+        st.info("⚪ Real-Time Layer: OFFLINE\n\n(Run `scripts/event_consumer.py` on the VM to activate)")
+
+
 st.title("🧠 Personal Health Copilot")
 st.caption("AI insights running securely over BigQuery via MCP.")
 

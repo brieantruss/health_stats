@@ -1,0 +1,13 @@
+[Unit]
+Description=Health Stats Real-Time Event Stream Consumer
+After=network.target
+
+[Service]
+User=briean
+WorkingDirectory=/home/briean/health_stats
+ExecStart=/home/briean/health_stats/.venv/bin/python3 /home/briean/health_stats/scripts/event_consumer.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

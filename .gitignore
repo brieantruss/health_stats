@@ -30,6 +30,7 @@ raw_files/
 processed_files/
 *.log
 prefect.db*
+health_events.db*
 
 # Local report outputs
 reports/
