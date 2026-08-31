@@ -1,0 +1,39 @@
+name: Simple AI CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Fetch the last 2 commits so we can see the diff
+
+      - name: Identify Contributor Email
+        id: filter
+        run: |
+          # Extract the email address of the latest commit author
+          AUTHOR_EMAIL=$(git log -1 --format='%ae')
+          echo "Commit author email: $AUTHOR_EMAIL"
+          
+          # Check if the author is briean.j.truss@gmail.com
+          if [ "$AUTHOR_EMAIL" = "briean.j.truss@gmail.com" ]; then
+            echo "eval_required=true" >> $GITHUB_OUTPUT
+            echo "Evaluating changes for $AUTHOR_EMAIL..."
+          else
+            echo "eval_required=false" >> $GITHUB_OUTPUT
+            echo "Bypassing CI for unrestricted contributor $AUTHOR_EMAIL."
+          fi
+
+      - name: Run Light AI Review
+        if: steps.filter.outputs.eval_required == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python .github/scripts/light_ai_review.py
