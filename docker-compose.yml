@@ -33,6 +33,17 @@ services:
       - health-network
     restart: unless-stopped
 
+  ops-dashboard:
+    build:
+      context: ./ops_dashboard
+      dockerfile: Dockerfile
+    container_name: ops-dashboard
+    ports:
+      - "5173:5173" # React + TypeScript Ops & Pub/Sub Dashboard
+    networks:
+      - health-network
+    restart: unless-stopped
+
 networks:
   health-network:
     driver: bridge

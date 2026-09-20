@@ -1,0 +1,14 @@
+[Unit]
+Description=Health Stats Operations & PubSub Dashboard (React + TypeScript)
+After=network.target fitness-api.service
+
+[Service]
+User=briean
+WorkingDirectory=/home/briean/dev/health_stats/ops_dashboard
+ExecStart=/usr/bin/npm run preview
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

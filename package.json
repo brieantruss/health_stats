@@ -1,6 +1,10 @@
 {
-  "name": "health-stats-dataform",
+  "name": "health-stats",
   "private": true,
+  "scripts": {
+    "dashboard:dev": "npm --prefix ops_dashboard run dev",
+    "dashboard:build": "npm --prefix ops_dashboard run build"
+  },
   "dependencies": {
     "@dataform/core": "3.0.0"
   }

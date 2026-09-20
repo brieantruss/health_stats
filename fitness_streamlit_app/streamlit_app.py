@@ -389,7 +389,7 @@ with st.container(border=True): # Use a container for better visual grouping and
             message, status = add_new_exercise(new_record)
             if status == 201:
                 st.success(f"exercise record added: {message.get('message')}. id: {message.get('id')}") # Lowercase messages
-                st.cache_data.clear() # Clear cache to refresh data display
+                get_all_exercises.clear() # Clear specific cache to refresh data display
                 st.rerun() # Rerun to refresh the page
             else:
                 st.error(f"failed to add exercise record: {message.get('error', 'unknown error')}") # Lowercase messages
@@ -437,7 +437,7 @@ with st.container(border=True): # Use a container for better visual grouping and
                 message, status = add_new_diet_record(new_diet_record)
                 if status == 201:
                     st.success(f"diet record added: {message.get('message')}. id: {message.get('id')}") # Lowercase messages
-                    st.cache_data.clear()
+                    get_all_diet_records.clear()
                     st.rerun()
                 else:
                     st.error(f"failed to add diet record: {message.get('error', 'unknown error')}") # Lowercase messages
@@ -480,7 +480,7 @@ with st.container(border=True): # Use a container for better visual grouping and
                     message, status = delete_existing_exercise(int(delete_id))
                     if status == 200:
                         st.success(f"exercise record deleted: {message.get('message')}") # Lowercase messages
-                        st.cache_data.clear()
+                        get_all_exercises.clear()
                         st.rerun()
                     elif status == 404:
                         st.warning(f"no exercise record found with id: {delete_id}") # Lowercase messages
@@ -527,7 +527,7 @@ with st.container(border=True): # Use a container for better visual grouping and
                     message, status = delete_existing_diet_record(int(delete_diet_id))
                     if status == 200:
                         st.success(f"diet record deleted: {message.get('message')}")
-                        st.cache_data.clear()
+                        get_all_diet_records.clear()
                         st.rerun()
                     elif status == 404:
                         st.warning(f"no diet record found with id: {delete_diet_id}")

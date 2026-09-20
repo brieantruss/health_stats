@@ -3,14 +3,32 @@ print(f"Query defined: SELECT ingredient_description FROM food_ingredients ORDER
 
 # ~/fitness_api/api_app.py
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import mysql.connector
 from datetime import datetime
 import logging # Import logging module
 import os
+import sys
 import time
+import json
+
+# Ensure scripts directory is importable
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from scripts.pipeline_telemetry import get_all_categories_telemetry, get_recent_events
+from scripts.event_stream import publish_event, init_db
 
 app = Flask(__name__)
+
+# Basic CORS support for dev dashboard
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    return response
 
 # Configure logging to show more details
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -372,6 +390,104 @@ def delete_diet_record(diet_id):
             cursor.close()
         if conn:
             conn.close()
+
+# ==========================================
+# PIPELINE TELEMETRY & PUB/SUB SSE ENDPOINTS
+# ==========================================
+
+@app.route('/api/pipeline/status', methods=['GET'])
+def get_pipeline_status():
+    """Returns current telemetry: category file counts, latest file names, and timestamps."""
+    try:
+        data = get_all_categories_telemetry()
+        return jsonify(data), 200
+    except Exception as e:
+        logging.error(f"Error getting pipeline status: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/pipeline/events', methods=['GET'])
+def get_pipeline_events():
+    """Returns recent events from the Pub/Sub SQLite event queue."""
+    try:
+        limit = request.args.get('limit', default=50, type=int)
+        events = get_recent_events(limit=limit)
+        return jsonify({"events": events}), 200
+    except Exception as e:
+        logging.error(f"Error getting pipeline events: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/pipeline/publish', methods=['POST'])
+def publish_pipeline_event():
+    """Publishes an event to the local event queue (useful for test simulations & triggers)."""
+    try:
+        body = request.get_json(force=True)
+        event_type = body.get('event_type') or body.get('eventType')
+        payload = body.get('payload', {})
+        if not event_type:
+            return jsonify({"error": "event_type is required"}), 400
+        
+        publish_event(event_type, payload)
+        return jsonify({"message": f"Event '{event_type}' published successfully", "timestamp": datetime.now().isoformat()}), 201
+    except Exception as e:
+        logging.error(f"Error publishing event: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/pipeline/stream', methods=['GET'])
+def stream_pipeline_events():
+    """
+    Server-Sent Events (SSE) streaming endpoint.
+    Streams initial telemetry snapshot and pushes live events / telemetry diffs.
+    """
+    def event_stream():
+        init_db()
+        # 1. Send initial snapshot immediately upon client connection
+        try:
+            initial_data = get_all_categories_telemetry()
+            yield f"event: INITIAL_STATE\ndata: {json.dumps(initial_data)}\n\n"
+        except Exception as e:
+            logging.error(f"Error pushing initial SSE state: {e}")
+
+        last_seen_event_id = 0
+        recent = get_recent_events(limit=1)
+        if recent:
+            last_seen_event_id = recent[0]["id"]
+
+        heartbeat_counter = 0
+        while True:
+            time.sleep(2)
+            heartbeat_counter += 1
+            
+            # Check for new events in SQLite event_queue
+            try:
+                new_events = []
+                recent_events = get_recent_events(limit=10)
+                for ev in reversed(recent_events):
+                    if ev["id"] > last_seen_event_id:
+                        new_events.append(ev)
+                        last_seen_event_id = max(last_seen_event_id, ev["id"])
+                
+                for ev in new_events:
+                    yield f"event: {ev['eventType']}\ndata: {json.dumps(ev)}\n\n"
+
+                # Every 6 seconds, send refreshed telemetry snapshot
+                if heartbeat_counter % 3 == 0:
+                    snapshot = get_all_categories_telemetry()
+                    yield f"event: TELEMETRY_UPDATE\ndata: {json.dumps(snapshot)}\n\n"
+                else:
+                    # Ping heartbeat
+                    yield f": heartbeat {datetime.now().isoformat()}\n\n"
+
+            except GeneratorExit:
+                break
+            except Exception as e:
+                logging.error(f"SSE stream error: {e}")
+                time.sleep(2)
+
+    return Response(event_stream(), mimetype='text/event-stream', headers={
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+        'Connection': 'keep-alive'
+    })
 
 if __name__ == '__main__':
     # Run on all available network interfaces on port 5000
