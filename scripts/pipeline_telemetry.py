@@ -3,11 +3,15 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 import sqlite3
 import json
+import re
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PROCESSED_DIR = os.path.join(REPO_ROOT, "processed_files")
 RAW_DIR = os.path.join(REPO_ROOT, "raw_files")
 DB_PATH = os.path.join(REPO_ROOT, "health_events.db")
+
+# Mirrors MYSQL_CONFIG in orchestrate.py (not imported to avoid loading prefect).
+MYSQL_CONFIG = {"host": "localhost", "user": "modulo", "password": "modulo", "database": "health_stats"}
 
 KNOWN_CATEGORIES = [
     "blood_pressure",
@@ -34,6 +38,35 @@ def format_file_size(size_bytes: int) -> str:
         return f"{size_bytes / (1024 * 1024):.1f} MB"
     return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
+_DATE_PATTERN = re.compile(r"(?<!\d)(\d{4})[.\-_]?(\d{2})[.\-_]?(\d{2})(?!\d)")
+
+def extract_filename_date(filename: str) -> Optional[str]:
+    """Returns the filename's date as YYYYMMDD (matches 20260621, 2026.06.21, 2026-06-21)."""
+    for m in _DATE_PATTERN.finditer(filename):
+        y, mo, d = m.groups()
+        if 1 <= int(mo) <= 12 and 1 <= int(d) <= 31:
+            return f"{y}{mo}{d}"
+    return None
+
+def get_drive_modified_times(category: str) -> Dict[str, float]:
+    """Latest Drive modified time (epoch) per file name from MySQL drive_file_sync_history."""
+    try:
+        import mysql.connector
+        conn = mysql.connector.connect(**MYSQL_CONFIG)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT file_name, MAX(drive_modified_time) FROM drive_file_sync_history "
+                "WHERE data_type = %s AND drive_modified_time IS NOT NULL GROUP BY file_name",
+                (category,),
+            )
+            return {name: ts.timestamp() for name, ts in cursor.fetchall()}
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"Error reading drive sync history for {category}: {e}")
+        return {}
+
 def get_category_telemetry(category: str) -> Dict[str, Any]:
     cat_dir = os.path.join(PROCESSED_DIR, category)
     raw_cat_dir = os.path.join(RAW_DIR, category)
@@ -43,8 +76,10 @@ def get_category_telemetry(category: str) -> Dict[str, Any]:
     latest_filename: Optional[str] = None
     latest_mtime: Optional[float] = None
     latest_size_bytes: Optional[int] = None
+    latest_key: Optional[tuple] = None
     
     # Check processed directory
+    drive_times = get_drive_modified_times(category)
     if os.path.exists(cat_dir) and os.path.isdir(cat_dir):
         try:
             entries = [os.path.join(cat_dir, f) for f in os.listdir(cat_dir) if not f.startswith('.')]
@@ -54,7 +89,10 @@ def get_category_telemetry(category: str) -> Dict[str, Any]:
                     try:
                         stat = os.stat(entry)
                         total_size_bytes += stat.st_size
-                        if latest_mtime is None or stat.st_mtime > latest_mtime:
+                        name = os.path.basename(entry)
+                        key = (extract_filename_date(name) or "", drive_times.get(name, stat.st_mtime))
+                        if latest_key is None or key > latest_key:
+                            latest_key = key
                             latest_mtime = stat.st_mtime
                             latest_filename = os.path.basename(entry)
                             latest_size_bytes = stat.st_size
