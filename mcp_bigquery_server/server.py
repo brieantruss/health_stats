@@ -2,6 +2,7 @@ import os
 import logging
 from google.cloud import bigquery
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("mcp_bigquery_server")
@@ -22,7 +23,13 @@ def get_bigquery_client():
     logger.warning("BigQuery key not found. Using ADC fallback.")
     return bigquery.Client(project=PROJECT_ID)
 
-mcp = FastMCP("BigQuery Health Server")
+mcp = FastMCP(
+    "BigQuery Health Server",
+    host="0.0.0.0",
+    transport_security=TransportSecuritySettings(
+        allowed_hosts=["mcp-bigquery-server:8000"],
+    ),
+)
 
 @mcp.tool()
 def get_schema_info() -> str:

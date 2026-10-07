@@ -26,7 +26,7 @@ services:
     volumes:
       - /home/briean/.gcp:/app/credentials:ro
     ports:
-      - "8502:8502" # Streamlit dashboard mapped publicly
+      - "127.0.0.1:8502:8502" # Private access via SSH tunnel
     depends_on:
       - mcp-bigquery-server
     networks:
