@@ -354,8 +354,15 @@ def delete_existing_diet_record(diet_id):
 
 # --- Streamlit Layout ---
 
+# Containers fix the render order regardless of code order below
+st.markdown("<h1>exercise</h1>", unsafe_allow_html=True)
+exercise_section = st.container()
+st.markdown("---")
+st.markdown("<h1>diet</h1>", unsafe_allow_html=True)
+diet_section = st.container()
+
 ## Add New Exercise Record
-with st.container(border=True): # Use a container for better visual grouping and a border
+with exercise_section, st.container(border=True): # Use a container for better visual grouping and a border
     st.markdown("<h2>add new exercise record</h2>", unsafe_allow_html=True) # Changed to lowercase
     with st.form("add_exercise_form"):
         col_ex1, col_ex2, col_ex3 = st.columns(3)
@@ -394,10 +401,8 @@ with st.container(border=True): # Use a container for better visual grouping and
             else:
                 st.error(f"failed to add exercise record: {message.get('error', 'unknown error')}") # Lowercase messages
 
-st.markdown("---") # Visual separator
-
 ## Add New Diet Record
-with st.container(border=True): # Use a container for better visual grouping and a border
+with diet_section, st.container(border=True): # Use a container for better visual grouping and a border
     st.markdown("<h2>add new diet record</h2>", unsafe_allow_html=True) # Changed to lowercase
     with st.form("add_diet_form"):
         food_descriptions = get_food_descriptions()
@@ -444,11 +449,8 @@ with st.container(border=True): # Use a container for better visual grouping and
             else:
                 st.error("cannot add diet record: no food item selected or loaded.") # Lowercase messages
 
-st.markdown("---") # Visual separator
-
-
 ## View & Manage Exercise Records
-with st.container(border=True): # Use a container for better visual grouping and a border
+with exercise_section, st.container(border=True): # Use a container for better visual grouping and a border
     st.markdown("<h2>view & manage exercise records</h2>", unsafe_allow_html=True) # Changed to lowercase
 
     filter_exercise_type = st.selectbox(
@@ -491,10 +493,8 @@ with st.container(border=True): # Use a container for better visual grouping and
     else:
         st.info("no exercise records found or api is unreachable.") # Lowercase messages
 
-st.markdown("---") # Visual separator
-
 ## View & Manage Diet Records
-with st.container(border=True): # Use a container for better visual grouping and a border
+with diet_section, st.container(border=True): # Use a container for better visual grouping and a border
     st.markdown("<h2>view & manage diet records</h2>", unsafe_allow_html=True) # Changed to lowercase
 
     diet_filter_options = ["All"] + get_food_descriptions()
