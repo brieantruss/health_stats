@@ -10,6 +10,9 @@ import logging
 from datetime import timedelta
 from prefect import flow, task
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "agents"))
+from ingestion_investigator import ingestion_investigator_flow
+
 # Base directory for the repository
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ETL_DIR = os.path.join(BASE_DIR, "scripts", "etl")
@@ -27,6 +30,24 @@ MYSQL_CONFIG = {
 }
 
 _db_initialized = False
+_FATAL_ETL_OUTPUT_MARKERS = (
+    "Authentication failed:",
+    "Error listing files from Google Drive:",
+    "MySQL Connector Error",
+)
+
+
+def get_etl_failure_details(returncode, stdout, stderr):
+    fatal_lines = [
+        line
+        for line in stdout.splitlines()
+        if any(marker in line for marker in _FATAL_ETL_OUTPUT_MARKERS)
+    ]
+    if returncode == 0 and not fatal_lines:
+        return None
+    if fatal_lines:
+        return "\n".join(fatal_lines)[-1500:]
+    return (stderr or stdout).strip()[-1500:] or "No output captured."
 
 def init_db_tables():
     global _db_initialized
@@ -135,13 +156,17 @@ def run_etl_step(script_name, *args):
     print(f"Executing: {' '.join(cmd)}")
     
     result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
+    failure_details = get_etl_failure_details(result.returncode, result.stdout, result.stderr)
+    if failure_details:
         log_to_file("ERROR", f"Script {script_name} failed with exit code {result.returncode}")
         log_to_file("ERROR", f"STDOUT from failed script:\n{result.stdout}")
         log_to_file("ERROR", f"STDERR from failed script:\n{result.stderr}")
         print(f"STDOUT:\n{result.stdout}")
         print(f"STDERR:\n{result.stderr}")
-        raise RuntimeError(f"Script {script_name} failed with exit code {result.returncode}")
+        raise RuntimeError(
+            f"Script {script_name} failed with exit code {result.returncode}. "
+            f"Failure details: {failure_details}"
+        )
     
     # Check if there is stdout to log, format it nicely
     stdout_content = result.stdout.strip()
@@ -213,12 +238,19 @@ def create_standard_flow(name, raw_subdir, processed_subdir, extract_script, tra
         os.makedirs(raw_dir, exist_ok=True)
         os.makedirs(processed_dir, exist_ok=True)
         
-        # 1. Extract
-        run_etl_step(extract_script, GCS_KEY_FILE, raw_dir)
-        # 2. Transform
-        run_etl_step(transform_script, raw_dir, processed_dir)
-        # 3. Load
-        run_etl_step(load_script, processed_dir)
+        try:
+            # 1. Extract
+            run_etl_step(extract_script, GCS_KEY_FILE, raw_dir)
+            # 2. Transform
+            run_etl_step(transform_script, raw_dir, processed_dir)
+            # 3. Load
+            run_etl_step(load_script, processed_dir)
+        except Exception as error:
+            try:
+                ingestion_investigator_flow(f"hs_{name}", str(error))
+            except Exception:
+                logging.exception("Ingestion investigator failed while diagnosing hs_%s", name)
+            raise
         
     return standard_flow
 
@@ -246,20 +278,27 @@ def location_flow():
     os.makedirs(processed_dir, exist_ok=True)
     os.makedirs(os.path.join(BASE_DIR, "processed_files", "weather"), exist_ok=True)
     
-    # 1. Extract
-    run_etl_step("extract_locations.py", GCS_KEY_FILE, raw_dir)
-    # 2. Transform
-    run_etl_step("transform_locations.py", raw_dir, processed_dir)
-    # 3. Load
-    run_etl_step("load_locations.py", processed_dir)
-    # 3.5 Geocode New Coordinates
-    run_etl_step("extract_and_load_reverse_geocoding.py")
-    # 4. Fetch Weather Data (dependent on locations table being loaded)
-    run_etl_step("extract_and_load_weather.py")
-    # 5. Fetch Outdoor AQI Data
-    run_etl_step("extract_and_load_aqi.py")
-    # 6. Fetch 7-day Weather & AQI Forecast
-    run_etl_step("extract_and_load_forecast.py")
+    try:
+        # 1. Extract
+        run_etl_step("extract_locations.py", GCS_KEY_FILE, raw_dir)
+        # 2. Transform
+        run_etl_step("transform_locations.py", raw_dir, processed_dir)
+        # 3. Load
+        run_etl_step("load_locations.py", processed_dir)
+        # 3.5 Geocode New Coordinates
+        run_etl_step("extract_and_load_reverse_geocoding.py")
+        # 4. Fetch Weather Data (dependent on locations table being loaded)
+        run_etl_step("extract_and_load_weather.py")
+        # 5. Fetch Outdoor AQI Data
+        run_etl_step("extract_and_load_aqi.py")
+        # 6. Fetch 7-day Weather & AQI Forecast
+        run_etl_step("extract_and_load_forecast.py")
+    except Exception as error:
+        try:
+            ingestion_investigator_flow("location", str(error))
+        except Exception:
+            logging.exception("Ingestion investigator failed while diagnosing location")
+        raise
 
 # Unified hourly flow that runs all 11 standard flows sequentially (one-by-one)
 @flow(name="hs_hourly_etl")
