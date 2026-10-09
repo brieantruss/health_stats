@@ -42,7 +42,7 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
             # Updated SQL INSERT statement for 'sleep' table with new column names and Last_updated
             # Assuming 'Last_updated' column is of type DATETIME/TIMESTAMP in MySQL and
             # we want to set it to the current time of insertion.
-            sql = f"INSERT INTO {table_name} (Date, Time, Duration, Stage, Last_updated) VALUES (%s, %s, %s, %s, %s)"
+            sql = f"INSERT IGNORE INTO {table_name} (Date, Time, Duration, Stage, Last_updated) VALUES (%s, %s, %s, %s, %s)"
 
             data_to_insert = []
             for row in csv_reader:

@@ -1,5 +1,6 @@
 import os
 import csv
+import time
 import mysql.connector
 # from datetime import datetime # No longer strictly needed for date parsing in this version
 
@@ -17,6 +18,20 @@ db_config = {
 # Table name in your MySQL database
 table_name = "steps"
 
+def connect_with_retry(db_config, attempts=6):
+    transient_errors = {2002, 2003, 2006, 2013}
+
+    for attempt in range(attempts):
+        try:
+            return mysql.connector.connect(**db_config)
+        except mysql.connector.Error as err:
+            if err.errno not in transient_errors or attempt == attempts - 1:
+                raise
+
+            delay = min(2 ** attempt, 30)
+            print(f"MySQL unavailable ({err}); retrying in {delay}s.")
+            time.sleep(delay)
+
 def load_single_csv_to_mysql(db_config, file_path, table_name):
     """
     Loads data from a single CSV file into a MySQL table.
@@ -27,19 +42,14 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
     print(f"Attempting to load data from: {file_path}")
 
     try:
-        cnx = mysql.connector.connect(
-            host=db_config["host"],
-            user=db_config["user"],
-            password=db_config["password"],
-            database=db_config["database"]
-        )
+        cnx = connect_with_retry(db_config)
         cursor = cnx.cursor()
 
         with open(file_path, 'r', newline='') as csv_file:
             csv_reader = csv.reader(csv_file)
             header = next(csv_reader) # Skip the header row (assuming header is present)
 
-            sql = f"INSERT INTO {table_name} (Date, Time, Steps, Last_Updated) VALUES (%s, %s, %s, %s)"
+            sql = f"INSERT IGNORE INTO {table_name} (Date, Time, Steps, Last_Updated) VALUES (%s, %s, %s, %s)"
 
             data_to_insert = []
             for row in csv_reader:
@@ -66,10 +76,13 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
 
     except mysql.connector.Error as err:
         print(f"MySQL Connector Error for {os.path.basename(file_path)}: {err}")
+        raise
     except FileNotFoundError:
         print(f"Error: CSV file not found at {file_path}. Please check the path.")
+        raise
     except Exception as e:
         print(f"An unexpected error occurred while processing {os.path.basename(file_path)}: {e}")
+        raise
     finally:
         if cursor:
             cursor.close()

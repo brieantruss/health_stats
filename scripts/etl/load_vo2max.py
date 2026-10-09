@@ -38,7 +38,7 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
             header = next(csv_reader) # Skip the header row (assuming header is present)
 
             # Updated SQL INSERT statement for vo2max table with Last_Updated
-            sql = f"INSERT INTO {table_name} (Date, Time, vo2max, last_updated) VALUES (%s, %s, %s, %s)"
+            sql = f"INSERT IGNORE INTO {table_name} (Date, Time, vo2max, last_updated) VALUES (%s, %s, %s, %s)"
 
             data_to_insert = []
             for row in csv_reader:

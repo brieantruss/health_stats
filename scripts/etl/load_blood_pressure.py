@@ -39,7 +39,7 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
 
             # Updated SQL INSERT statement for blood_pressure table
             # It now includes Diastolic, Systolic, Heart rate, Comment, and Last_Updated
-            sql = f"INSERT INTO {table_name} (Date, Time, Diastolic, Systolic, heart_rate, Comment, Last_Updated) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            sql = f"INSERT IGNORE INTO {table_name} (Date, Time, Diastolic, Systolic, heart_rate, Comment, Last_Updated) VALUES (%s, %s, %s, %s, %s, %s, %s)"
 
             data_to_insert = []
             for row in csv_reader:

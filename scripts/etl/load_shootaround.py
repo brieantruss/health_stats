@@ -53,7 +53,7 @@ def load_shootaround_csv_to_mysql(db_config, file_path, table_name):
             # Max speed -> max_speed
             # (Generated) -> last_updated
             sql = f"""
-                INSERT INTO {table_name} (
+                INSERT IGNORE INTO {table_name} (
                     activity_name, activity_date, activity_time, elapsed_time_seconds, distance_miles, calories_kcal, 
                     average_heart_rate, max_heart_rate, average_speed_mph, max_speed_mph, 
                     last_updated

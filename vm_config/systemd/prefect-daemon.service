@@ -1,12 +1,13 @@
 [Unit]
 Description=Prefect Orchestration Daemon for Health Stats
+Requires=mysql.service
 After=network.target mysql.service
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/home/briean/health_stats
-ExecStart=/home/briean/health_stats/.venv/bin/python3 scripts/orchestrate.py
+ExecStart=/usr/bin/python3 scripts/orchestrate.py
 Restart=always
 RestartSec=5
 # Force lightweight SQLite backend in-memory/file caching

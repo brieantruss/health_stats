@@ -44,7 +44,7 @@ def load_single_csv_to_mysql(db_config, file_path, table_name):
 
             # Define the SQL INSERT statement matching the 'walking' table schema
             sql = f"""
-            INSERT INTO {table_name} (
+            INSERT IGNORE INTO {table_name} (
             activity_type,
             activity_name,
             Date,
