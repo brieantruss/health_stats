@@ -2,7 +2,7 @@
 
 This document describes the architecture currently configured in this repository and the commands used to operate it. It is a deployment and troubleshooting reference, not proof of the state of a remote VM or GCP service. Confirm live state with the checks in [Operations](#operations).
 
-Repository baseline: `2026-09-22`.
+Repository baseline: `2026-10-12`.
 
 ## 1. Current Architecture
 
@@ -159,6 +159,33 @@ pip install -r fitness_api/requirements.txt -r gps_logger_app/requirements.txt
 pip install -r mcp_bigquery_server/requirements.txt
 ```
 
+### Restarting and updating VM services
+
+A `systemctl restart` restarts a process using the files currently on disk. It does not copy new code into the VM or rebuild a container. For example, after updating the Fitness API source in this checkout:
+
+```bash
+sudo systemctl restart fitness-api.service
+sudo systemctl status fitness-api.service --no-pager
+sudo journalctl -u fitness-api.service -n 100 --no-pager
+```
+
+Use the same pattern for the other systemd units listed above. If you changed a unit file itself, reload systemd before restarting it:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart <service-name>.service
+```
+
+For a Compose service, rebuild and replace that service's container from its local Dockerfile:
+
+```bash
+docker compose up -d --build health-copilot-ui
+docker compose ps
+docker compose logs --tail=100 health-copilot-ui
+```
+
+Replace the service name with `mcp-bigquery-server` or `ops-dashboard` as needed. To rebuild and recreate all Compose services, run `docker compose up -d --build` from the repository root. A systemd restart of an unrelated VM service does not rebuild these containers.
+
 ### Compose services
 
 From the repository root:
@@ -173,17 +200,60 @@ The Compose services require the host credentials directory `/home/briean/.gcp` 
 
 ### Workout UI on Cloud Run
 
-The deployment target is `fitness-streamlit-ui` in `us-central1`, with scale-to-zero, one maximum instance, `256Mi` memory, and the Fitness API URL supplied through `API_BASE_URL`:
+Cloud Run runs a container image, not the Python source directory. **Edit & deploy new revision** in the console reuses the configured image; it does not include source edits. A source update must build an image and deploy a new revision. The `fitness_streamlit_app/Dockerfile` is used for this build. Cloud Run source deployment uses Cloud Build and stores the image in the regional Artifact Registry repository `cloud-run-source-deploy`.
+
+#### Deploy the current VM checkout
+
+Run this from the repository root on the VM. First confirm that gcloud is using an identity authorized to deploy. In the successful deployment on 2026-10-12, `btruss@moduloinsights.com` was authorized; the VM's `bq-agent@my-data-479716.iam.gserviceaccount.com` identity did not have the required access.
+
+```bash
+gcloud auth login btruss@moduloinsights.com --no-launch-browser
+gcloud auth list
+```
+
+Complete any interactive sign-in prompts, then check that the intended account has the `*` in `gcloud auth list`. Do not put OAuth codes, passwords, or access tokens in this repository.
+
+Deploy the source and route traffic to the new revision:
 
 ```bash
 gcloud run deploy fitness-streamlit-ui \
+       --project my-data-479716 \
   --source fitness_streamlit_app \
   --region us-central1 \
   --platform managed \
   --allow-unauthenticated \
-  --min-instances 0 --max-instances 1 --memory 256Mi --cpu 1 \
-  --set-env-vars API_BASE_URL="http://<VM_EXTERNAL_IP>:5001"
+       --min-instances 0 \
+       --max-instances 1 \
+       --memory 256Mi \
+       --cpu 1 \
+       --set-env-vars API_BASE_URL="http://146.148.87.26:5001"
 ```
+
+Wait for the command to report that the new revision is serving traffic. Verify the active revision and URL with:
+
+```bash
+gcloud run services describe fitness-streamlit-ui \
+       --project my-data-479716 \
+       --region us-central1 \
+       --format="value(status.latestReadyRevisionName,status.url)"
+```
+
+To inspect revisions and logs in the console, open **Cloud Run → Services → `fitness-streamlit-ui`**. Use **Revisions** to check traffic and roll back to a previous revision. **Edit & deploy new revision** with the existing image changes service configuration or creates a revision from that image; it does not rebuild the local source.
+
+For ongoing Console-based deployment, the source must be in a connected Git repository: open the service and set up continuous deployment, connect the repository and branch, set the source root to `fitness_streamlit_app`, select its `Dockerfile`, and retain `API_BASE_URL`. Each configured build then creates and deploys a new revision. The Console cannot build directly from the VM's uncommitted local directory; use the command above for that checkout.
+
+#### IAM for source deployment
+
+Source deployment needs permissions for distinct principals and resources. Grant roles to the identity shown as active by `gcloud auth list`, not automatically to the VM or runtime service account:
+
+| Principal | Resource | Role |
+| :--- | :--- | :--- |
+| Deployer account | Project `my-data-479716` | Cloud Run Source Developer (`roles/run.sourceDeveloper`) and Service Usage Consumer (`roles/serviceusage.serviceUsageConsumer`) |
+| Deployer account | Artifact Registry repository `cloud-run-source-deploy` in `us-central1` | Artifact Registry Reader (`roles/artifactregistry.reader`) |
+| Deployer account | Cloud Run service identity (currently the Compute Engine default account `94214537108-compute@developer.gserviceaccount.com`) | Service Account User (`roles/iam.serviceAccountUser`) |
+| Cloud Build service account used by the source build | Project `my-data-479716` | Cloud Run Builder (`roles/run.builder`) |
+
+The Cloud Run Admin API and Cloud Build API must be enabled. If deployment fails, use the exact permission and resource in the error or the IAM Troubleshooter before changing roles. For example, `artifactregistry.repositories.get` is an Artifact Registry repository access failure for the named deployer; Artifact Registry Reader is the source-deploy role for the deployer. Google documents the complete [source deployment requirements](https://docs.cloud.google.com/run/docs/deploying-source-code) and [Cloud Run deployment roles](https://docs.cloud.google.com/run/docs/reference/iam/roles).
 
 The public Cloud Run service must be able to reach the VM API. Review firewall exposure and authentication before using `--allow-unauthenticated` in a production setting.
 
