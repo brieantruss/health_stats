@@ -34,6 +34,7 @@ ALLOWED_EXERCISES = [
     'neck_raises',
     'neck_stretch',
     'prone_chest_opener',
+    'pull_downs',
     'pull_ups',
     'push_ups_decline',
     'push_ups_fingers_decline',
