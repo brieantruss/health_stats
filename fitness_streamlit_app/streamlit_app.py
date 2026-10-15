@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime, date
+import re
 
 # --- Configuration ---
 # Supports environment variables for secure/flexible deployment (e.g., Google Cloud Run)
@@ -249,6 +250,37 @@ with col3:
 
 # --- Functions to interact with the API ---
 
+@st.cache_data(ttl=60)
+def get_exercise_types():
+    try:
+        response = requests.get(f"{API_BASE_URL}/exercise-types", timeout=15)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"unable to fetch exercise types from {API_BASE_URL}: {e}")
+        return []
+
+
+def add_exercise_type(name):
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/exercise-types",
+            json={"name": name},
+            timeout=15,
+        )
+        response.raise_for_status()
+        return response.json(), response.status_code
+    except requests.exceptions.RequestException as e:
+        try:
+            error = e.response.json().get("error", str(e))
+        except (AttributeError, ValueError):
+            error = str(e)
+        return {"error": error}, e.response.status_code if e.response is not None else 500
+
+
+def normalize_exercise_type(value):
+    return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
+
 @st.cache_data(ttl=60) # Cache data for 60 seconds
 def get_all_exercises(exercise_type=None):
     params = {}
@@ -362,6 +394,29 @@ st.markdown("---")
 st.markdown("<h1>diet</h1>", unsafe_allow_html=True)
 diet_section = st.container()
 
+exercise_types = get_exercise_types()
+exercise_options = exercise_types or ALLOWED_EXERCISES
+
+with exercise_section, st.container(border=True):
+    st.markdown("<h2>add exercise type</h2>", unsafe_allow_html=True)
+    with st.form("add_exercise_type_form"):
+        exercise_type_input = st.text_input("Exercise name", placeholder="e.g. Incline Press")
+        exercise_type_key = normalize_exercise_type(exercise_type_input)
+        if exercise_type_key:
+            st.caption(f"Added as: {exercise_type_key}")
+        add_type_submitted = st.form_submit_button("add exercise type")
+        if add_type_submitted:
+            if not exercise_type_key or len(exercise_type_key) > 100:
+                st.error("Enter an exercise name containing up to 100 letters or numbers.")
+            else:
+                result, status = add_exercise_type(exercise_type_input)
+                if status in (200, 201):
+                    get_exercise_types.clear()
+                    st.success(f"Exercise type ready: {result['name']}")
+                    st.rerun()
+                else:
+                    st.error(f"Could not add exercise type: {result.get('error', 'unknown error')}")
+
 ## Add New Exercise Record
 with exercise_section, st.container(border=True): # Use a container for better visual grouping and a border
     st.markdown("<h2>add new exercise record</h2>", unsafe_allow_html=True) # Changed to lowercase
@@ -370,7 +425,7 @@ with exercise_section, st.container(border=True): # Use a container for better v
         with col_ex1:
             selected_exercise = st.selectbox(
                 "Exercise Type",
-                ALLOWED_EXERCISES,
+                exercise_options,
                 key="add_exercise_type",
                 help="Type to search for an exercise or select from the dropdown."
             )
@@ -456,7 +511,7 @@ with exercise_section, st.container(border=True): # Use a container for better v
 
     filter_exercise_type = st.selectbox(
         "Filter by Exercise Type",
-        ["All"] + ALLOWED_EXERCISES,
+        ["All"] + exercise_options,
         key="filter_exercise_type",
         help="Type to search for an exercise or select from the dropdown to filter records."
     )

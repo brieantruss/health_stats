@@ -8,6 +8,7 @@ import mysql.connector
 from datetime import datetime
 import logging # Import logging module
 import os
+import re
 import sys
 import time
 import json
@@ -131,6 +132,103 @@ ALLOWED_EXERCISES = [
     'weight'
     ]
 
+ALLOWED_EXERCISES.extend([
+    'body_weight_squats',
+    'pull_ups_overhand',
+    'pull_ups_palms_in',
+    'pull_ups_underhand',
+    'push_ups__fingers',
+    'push_ups_wide',
+    'bench press (upper body)',
+    'squats (lower body)',
+    'deadlift (lower body)',
+    'overhead press (upper body)',
+    'barbell curl (arms)',
+    'hiking',
+    'running',
+    'cycling',
+    'swimming',
+    'shootaround (basketball)',
+])
+
+
+def ensure_exercise_types(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS exercise_types (
+            name VARCHAR(100) NOT NULL PRIMARY KEY,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.executemany(
+        "INSERT IGNORE INTO exercise_types (name) VALUES (%s)",
+        [(name,) for name in ALLOWED_EXERCISES],
+    )
+    cursor.execute("""
+        INSERT IGNORE INTO exercise_types (name)
+        SELECT DISTINCT exercise
+        FROM exercises
+        WHERE exercise IS NOT NULL AND exercise <> ''
+    """)
+
+
+def normalize_exercise_type(value):
+    if not isinstance(value, str):
+        return None
+    name = re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
+    if not name or len(name) > 100:
+        return None
+    return name
+
+
+@app.route('/exercise-types', methods=['GET'])
+def get_exercise_types():
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ensure_exercise_types(cursor)
+        conn.commit()
+        cursor.execute("SELECT name FROM exercise_types ORDER BY name ASC")
+        return jsonify([row[0] for row in cursor.fetchall()])
+    except Exception as e:
+        logging.error(f"Error fetching exercise types: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route('/exercise-types', methods=['POST'])
+def add_exercise_type():
+    data = request.get_json(silent=True) or {}
+    name = normalize_exercise_type(data.get('name'))
+    if not name:
+        return jsonify({"error": "Enter a name containing up to 100 letters or numbers."}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ensure_exercise_types(cursor)
+        cursor.execute("INSERT IGNORE INTO exercise_types (name) VALUES (%s)", (name,))
+        conn.commit()
+        status = 201 if cursor.rowcount == 1 else 200
+        return jsonify({"name": name}), status
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logging.error(f"Error adding exercise type: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @app.route('/')
 def home():
     return "Fitness API is running! Use /exercises or /diet endpoints."
@@ -148,10 +246,13 @@ def get_exercises():
     exercise_filter = request.args.get('exercise')
 
     if exercise_filter:
-        if exercise_filter not in ALLOWED_EXERCISES:
+        ensure_exercise_types(cursor)
+        conn.commit()
+        cursor.execute("SELECT 1 FROM exercise_types WHERE name = %s", (exercise_filter,))
+        if cursor.fetchone() is None:
             cursor.close()
             conn.close()
-            return jsonify({"error": f"Invalid exercise type. Allowed are: {', '.join(ALLOWED_EXERCISES)}"}), 400
+            return jsonify({"error": f"Invalid exercise type: {exercise_filter}"}), 400
         query = "SELECT id, exercise, record_date, reps, duration, resistance_kg FROM exercises WHERE exercise = %s ORDER BY record_date DESC, id DESC"
         cursor.execute(query, (exercise_filter,))
     else:
@@ -198,9 +299,6 @@ def add_exercise():
     if not exercise or not record_date_str:
         return jsonify({"error": "Missing required fields: exercise and record_date"}), 400
 
-    if exercise not in ALLOWED_EXERCISES:
-        return jsonify({"error": f"Invalid exercise type. Allowed are: {', '.join(ALLOWED_EXERCISES)}"}), 400
-
     try:
         # Validate date format
         record_date = datetime.strptime(record_date_str, '%Y-%m-%d').date()
@@ -220,6 +318,11 @@ def add_exercise():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        ensure_exercise_types(cursor)
+        conn.commit()
+        cursor.execute("SELECT 1 FROM exercise_types WHERE name = %s", (exercise,))
+        if cursor.fetchone() is None:
+            return jsonify({"error": f"Invalid exercise type: {exercise}"}), 400
         query = """
             INSERT INTO exercises (exercise, record_date, reps, duration, resistance_kg)
             VALUES (%s, %s, %s, %s, %s)

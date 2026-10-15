@@ -178,76 +178,13 @@ sudo systemctl restart <service-name>.service
 
 ### Adding a new exercise type
 
-This procedure adds a new selectable exercise name; it does not add a workout record for an existing name.
+After the one-time rollout below, add types directly in the Workout UI. Enter a name in **Add exercise type** and submit. The API converts it to a lowercase underscore key, stores it in MySQL, and makes it immediately available in both exercise menus. This adds a selectable type, not a workout record.
 
-**Step 1: Choose the exercise key.** Prefer lowercase with underscores (for example, `incline_press`). Decide whether records will use repetitions, duration, resistance, or a combination of those existing fields.
+The API creates the `exercise_types` table on first use and seeds it from the built-in names and existing exercise records. Its MySQL account therefore needs permission to create that table, in addition to its existing read/write permissions. New types use the existing `exercises` columns and are generic in analytics; only special categorization or calculations require a Dataform change and refresh.
 
-**Step 2: Update both exercise lists.** Add the key to `ALLOWED_EXERCISES` in `fitness_api/api_app.py` and `fitness_streamlit_app/streamlit_app.py`. The API validates submitted and filtered names against its list; the Streamlit list drives both the entry form and the record filter. Update a `bu.py` copy only if the deployed service actually runs that copy.
+**One-time rollout:** deploy the updated API source to the VM and restart `fitness-api.service`, then deploy the updated `fitness_streamlit_app` source to Cloud Run. Follow the existing [Fitness API restart procedure](#restarting-and-updating-vm-services) and [Cloud Run source deployment procedure](#deploy-the-current-vm-checkout). Verify the `/exercise-types` API endpoint and confirm the form appears in the deployed UI. Do not deploy or restart services for each later exercise addition.
 
-**Step 3: Check storage and analytics.** New names are treated as generic exercises by `definitions/view_activities_and_weight.sqlx`; update the relevant SQLX definition only if the name needs special categorization or calculations. Change the database schema only if the existing `exercises` columns cannot store the intended record.
-
-**Step 4: Restart the Fitness API.** First ensure the updated `api_app.py` is in the VM checkout used by `fitness-api.service`. Open a terminal on the VM and run:
-
-```bash
-sudo systemctl restart fitness-api.service
-sudo systemctl is-active fitness-api.service
-sudo systemctl status fitness-api.service --no-pager
-sudo journalctl -u fitness-api.service -n 100 --no-pager
-```
-
-`is-active` should report `active`. If it does not, inspect the journal output before continuing. Restarting does not copy source code to the VM.
-
-**Step 5: Verify the API accepts the new name.** Run this on the VM; replace `incline_press` with the chosen key. An empty JSON list is valid if there are no records yet. An invalid-name response means the API allowlist was not updated or the running service has not loaded the change.
-
-```bash
-curl -i "http://127.0.0.1:5001/exercises?exercise=incline_press"
-```
-
-**Step 6: Deploy the Streamlit UI to Cloud Run.** Do this if `fitness_streamlit_app/streamlit_app.py` changed. Open a terminal **on the VM** and run these commands from the repository root, `/home/briean/health_stats`. Confirm `gcloud auth list` shows the authorized deployer account with `*` before deploying:
-
-```bash
-cd /home/briean/health_stats
-gcloud auth list
-```
-
-From that same directory, run the deployment command below. It builds the `fitness_streamlit_app` source, creates a new revision, and routes traffic to it:
-
-```bash
-gcloud run deploy fitness-streamlit-ui \
-       --project my-data-479716 \
-       --source fitness_streamlit_app \
-       --region us-central1 \
-       --platform managed \
-       --allow-unauthenticated \
-       --min-instances 0 \
-       --max-instances 1 \
-       --memory 256Mi \
-       --cpu 1 \
-       --set-env-vars API_BASE_URL="http://146.148.87.26:5001"
-```
-
-Wait for deployment to report that the revision is serving traffic, then verify the ready revision and service URL:
-
-```bash
-gcloud run services describe fitness-streamlit-ui \
-       --project my-data-479716 \
-       --region us-central1 \
-       --format="value(status.latestReadyRevisionName,status.url)"
-```
-
-Open the reported URL and confirm the new exercise appears in both the add-exercise and filter menus. Do not use `systemctl restart` for the Streamlit UI; it runs on Cloud Run. If only the UI list changed, no Fitness API restart is needed.
-
-**Step 7: Refresh analytics if needed.** If the new type needs to appear in BigQuery or reports, run the configured MySQL-to-BigQuery sync and Dataform workflow after verifying their deployment and schedule.
-
-For a Compose service, rebuild and replace that service's container from its local Dockerfile:
-
-```bash
-docker compose up -d --build health-copilot-ui
-docker compose ps
-docker compose logs --tail=100 health-copilot-ui
-```
-
-Replace the service name with `mcp-bigquery-server` or `ops-dashboard` as needed. To rebuild and recreate all Compose services, run `docker compose up -d --build` from the repository root. A systemd restart of an unrelated VM service does not rebuild these containers.
+The Fitness API and Workout UI are currently publicly reachable, and this add-type endpoint follows the API's existing unauthenticated access model. Anyone able to reach the API can add a type; restrict or authenticate the API before using this workflow with untrusted callers.
 
 ### Compose services
 
