@@ -42,7 +42,7 @@ I migrated, debugged, and optimized this cloud setup, built the personal health 
 
 ---
 
-## Scheduled Personal Health Agents 🤖
+## Scheduled Personal Health Agents
 
 The pipeline runs four autonomous agents (orchestrated via Prefect) that process historical trends and real-time conditions to deliver personalized coaching insights:
 
@@ -55,7 +55,7 @@ The pipeline runs four autonomous agents (orchestrated via Prefect) that process
 
 ---
 
-## Developer CLI Skills 🌟
+## Developer CLI Skills
 
 For developer operations, system monitoring, and rapid log entry, four interactive terminal skills are available:
 
@@ -121,7 +121,7 @@ A suite of serverless Dataform compilation scripts (`definitions/*.sqlx`) transf
 
 ---
 
-## 🧠 Conversational Health Copilot (Model Context Protocol)
+## Conversational Health Copilot (Model Context Protocol)
 
 We designed and deployed an end-user facing conversational **Health Copilot** that runs natively in the background of your GCP VM, allowing secure, real-time natural language query execution over your BigQuery data warehouse.
 
@@ -140,7 +140,7 @@ This implementation acts as an enterprise-grade sandbox (mirroring professional 
 *   **Dynamic Data Charting Engine**:
     *   The Streamlit frontend features an automated Markdown parser that intercepts tabular SQL results returned by Gemini, converts them on-the-fly into Pandas DataFrames, and automatically plots interactive line and bar charts (using Altair).
 *   **SQL Audit and Transparency**:
-    *   Each conversational response features a collapsible audit drawer (`🔍 SQL Query Executed`) showing you the precise, raw BigQuery SQL syntax formulated by the AI, making it a powerful educational and debugging environment.
+    *   Each conversational response features a collapsible audit drawer (`SQL Query Executed`) showing you the precise, raw BigQuery SQL syntax formulated by the AI, making it a powerful educational and debugging environment.
 
 ---
 
