@@ -253,10 +253,10 @@ def get_exercises():
             cursor.close()
             conn.close()
             return jsonify({"error": f"Invalid exercise type: {exercise_filter}"}), 400
-        query = "SELECT id, exercise, record_date, reps, duration, resistance_kg FROM exercises WHERE exercise = %s ORDER BY record_date DESC, id DESC"
+        query = "SELECT id, exercise, record_date, reps, duration, resistance_kg FROM exercises WHERE exercise = %s ORDER BY record_date DESC, id DESC LIMIT 50"
         cursor.execute(query, (exercise_filter,))
     else:
-        query = "SELECT id, exercise, record_date, reps, duration, resistance_kg FROM exercises ORDER BY record_date DESC, id DESC"
+        query = "SELECT id, exercise, record_date, reps, duration, resistance_kg FROM exercises ORDER BY record_date DESC, id DESC LIMIT 50"
         cursor.execute(query)
 
     data = []
