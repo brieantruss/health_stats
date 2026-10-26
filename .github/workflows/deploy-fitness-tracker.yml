@@ -40,7 +40,7 @@ jobs:
           printf '%s\n' "$API_VM_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
           ssh -o BatchMode=yes "$API_VM_USER@$API_VM_HOST" \
-            "sudo -n /bin/bash -c 'git -c safe.directory=/home/briean/health_stats -C /home/briean/health_stats pull --ff-only origin main && /usr/bin/systemctl restart fitness-api.service && /usr/bin/systemctl is-active fitness-api.service'"
+            "sudo -n -u briean /usr/bin/git -C /home/briean/health_stats pull --ff-only origin main && sudo -n /usr/bin/systemctl restart fitness-api.service && sudo -n /usr/bin/systemctl is-active fitness-api.service"
 
   deploy-ui:
     if: inputs.target == 'both' || inputs.target == 'ui'
