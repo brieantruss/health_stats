@@ -1,0 +1,81 @@
+name: Deploy Fitness Tracker
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deploy
+        required: true
+        type: choice
+        options:
+          - both
+          - api
+          - ui
+        default: both
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-api:
+    if: inputs.target == 'both' || inputs.target == 'api'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy API and restart service
+        env:
+          API_VM_HOST: ${{ secrets.API_VM_HOST }}
+          API_VM_USER: ${{ secrets.API_VM_USER }}
+          API_VM_SSH_PRIVATE_KEY: ${{ secrets.API_VM_SSH_PRIVATE_KEY }}
+          API_VM_KNOWN_HOSTS: ${{ secrets.API_VM_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$API_VM_HOST"
+          test -n "$API_VM_USER"
+          test -n "$API_VM_SSH_PRIVATE_KEY"
+          test -n "$API_VM_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$API_VM_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$API_VM_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          ssh -o BatchMode=yes "$API_VM_USER@$API_VM_HOST" \
+            "sudo -n /bin/bash -c 'git -c safe.directory=/home/briean/health_stats -C /home/briean/health_stats pull --ff-only origin main && /usr/bin/systemctl restart fitness-api.service && /usr/bin/systemctl is-active fitness-api.service'"
+
+  deploy-ui:
+    if: inputs.target == 'both' || inputs.target == 'ui'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Deploy Streamlit UI to Cloud Run
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$API_BASE_URL"
+          test -n "$GCP_PROJECT_ID"
+          gcloud run deploy fitness-streamlit-ui \
+            --project "$GCP_PROJECT_ID" \
+            --source fitness_streamlit_app \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 1 \
+            --memory 256Mi \
+            --cpu 1 \
+            --set-env-vars "API_BASE_URL=$API_BASE_URL"

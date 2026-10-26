@@ -26,3 +26,24 @@ gcloud run deploy fitness-streamlit-ui \
 ## Cloud Run Free Tier Scaling Benefits
 - `--min-instances 0`: Tells Cloud Run to scale down to 0 instances when no workouts are being entered, costing $0.
 - `--memory 256Mi` and `--cpu 1`: Configures minimal footprint to fit safely within GCP's permanent free tier monthly allowance.
+
+## Deploy from GitHub Actions
+
+The **Deploy Fitness Tracker** workflow can deploy the API, the UI, or both from
+the repository's **Actions** tab. Choose **Run workflow** and select the target.
+The API job pulls `main` on the VM and restarts `fitness-api.service`; the UI job
+builds and deploys `fitness_streamlit_app` to Cloud Run.
+
+Configure these repository settings once:
+
+- **Actions secrets:** `API_VM_HOST`, `API_VM_USER`, `API_VM_SSH_PRIVATE_KEY`,
+  `API_VM_KNOWN_HOSTS`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, and
+  `GCP_DEPLOY_SERVICE_ACCOUNT`.
+- **Actions variables:** `GCP_PROJECT_ID` and `API_BASE_URL`.
+
+The VM SSH account must be allowed to run `sudo -n systemctl restart
+fitness-api.service` and pull the repository's `main` branch. Pin the VM SSH
+host key in `API_VM_KNOWN_HOSTS`; do not disable host-key checking. Configure
+Google Cloud Workload Identity Federation for this GitHub repository and grant
+the deployment service account the permissions needed to deploy Cloud Run
+source.
