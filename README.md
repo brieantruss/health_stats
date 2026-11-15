@@ -14,6 +14,24 @@ I migrated, debugged, and optimized this cloud setup, built the personal health 
 
 ---
 
+## Recognition & Shoutouts
+
+I want to give special recognition to the developers, communities, and organizations that made it possible to build and operate this platform at little to no cost.
+
+*   **[Samsung Galaxy Watch](https://www.samsung.com/us/watches/)**: Captures the core health and activity data that powers this entire analytics platform.
+*   **[Health Sync](https://healthsync.app/)**: Makes the whole pipeline possible by automating exports of my Samsung Watch data to Google Drive.
+*   **[GPS Logger](https://gpslogger.app/)**: Provides reliable mobile GPS tracking data that feeds the location and weather enrichment workflows.
+*   **[Visual Crossing Weather API](https://www.visualcrossing.com/weather-api/)**: Powers the weather enrichment layer so activities can be analyzed with environmental context.
+*   **[Prefect Core](https://www.prefect.io/)**: Schedules and orchestrates both standard ETL data flows and scheduled personal health agent executions on a rock-solid foundation.
+*   **[Google Cloud Dataform](https://cloud.google.com/dataform)**: Handles automated serverless SQL pipelines, joining and parsing raw data within BigQuery with zero hosting overhead.
+*   **[Google Cloud Free Tier](https://cloud.google.com/free?hl=en)**: Made it realistic to host and operate this project in the cloud with a $0/month target.
+*   **[Ubuntu Server](https://ubuntu.com/)**: Provides the stable operating system foundation for VM services and automation jobs.
+*   **[Raspberry Pi](https://www.raspberrypi.com/)**: Served as the original platform where early versions of this pipeline were prototyped before cloud migration.
+*   **[Google Cloud Professional Data Engineer Certificate](https://www.credly.com/badges/8efeb8f9-dd9e-46d2-b7c0-cc1ba975194e)**: A major learning milestone that directly influenced the architecture and engineering choices in this project.
+*   **[Cline & Claude 3.5 Sonnet](https://github.com/gofireflyio/cline)**: Played the central developer role in migrating from the local Pi cluster to GCP, resolving lock contentions, designing the automated health agents, and writing developer-centric CLI skills.
+
+---
+
 ## Architecture & Data Flow
 
 ```
@@ -178,20 +196,3 @@ Running a full database, orchestration server, and two APIs on a GCP `e2-micro` 
 └── ARCHITECTURE_AND_MANAGEMENT.md    # Master sysadmin operations & troubleshooting playbook
 ```
 
----
-
-## Recognition & Shoutouts
-
-I want to give special recognition to the developers, communities, and organizations that made it possible to build and operate this platform at little to no cost.
-
-*   **[Samsung Galaxy Watch](https://www.samsung.com/us/watches/)**: Captures the core health and activity data that powers this entire analytics platform.
-*   **[Health Sync](https://healthsync.app/)**: Makes the whole pipeline possible by automating exports of my Samsung Watch data to Google Drive.
-*   **[GPS Logger](https://gpslogger.app/)**: Provides reliable mobile GPS tracking data that feeds the location and weather enrichment workflows.
-*   **[Visual Crossing Weather API](https://www.visualcrossing.com/weather-api/)**: Powers the weather enrichment layer so activities can be analyzed with environmental context.
-*   **[Prefect Core](https://www.prefect.io/)**: Schedules and orchestrates both standard ETL data flows and scheduled personal health agent executions on a rock-solid foundation.
-*   **[Google Cloud Dataform](https://cloud.google.com/dataform)**: Handles automated serverless SQL pipelines, joining and parsing raw data within BigQuery with zero hosting overhead.
-*   **[Google Cloud Free Tier](https://cloud.google.com/free?hl=en)**: Made it realistic to host and operate this project in the cloud with a $0/month target.
-*   **[Ubuntu Server](https://ubuntu.com/)**: Provides the stable operating system foundation for VM services and automation jobs.
-*   **[Raspberry Pi](https://www.raspberrypi.com/)**: Served as the original platform where early versions of this pipeline were prototyped before cloud migration.
-*   **[Google Cloud Professional Data Engineer Certificate](https://www.credly.com/badges/8efeb8f9-dd9e-46d2-b7c0-cc1ba975194e)**: A major learning milestone that directly influenced the architecture and engineering choices in this project.
-*   **[Cline & Claude 3.5 Sonnet](https://github.com/gofireflyio/cline)**: Played the central developer role in migrating from the local Pi cluster to GCP, resolving lock contentions, designing the automated health agents, and writing developer-centric CLI skills.
