@@ -1,4 +1,4 @@
-# Health Stats: Personal Health & Fitness Data Pipeline & Cloud Orchestration
+# Health Stats: Personal Health & Fitness Dashboard, Data Pipeline & Cloud Orchestration
 
 Health Stats is an automated data platform that ingests, cleans, and consolidates full historical personal fitness data from my [Samsung Galaxy Watch](https://www.samsung.com/us/watches/) (examples include daily steps, sleep, and vitals), location data from mobile phone GPS logging, and workout details from a custom-built exercise logging API into a single database and visualizes the results for tracking and analysis. 
 
