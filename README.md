@@ -8,9 +8,17 @@ Originally built manually and running on a local Raspberry Pi cluster, this syst
 
 ---
 
+## Dashboard Preview (Public)
+
+<p align="center">
+  <img src="docs/images/dashboard_screenshot.png" alt="Dashboard preview:">
+</p>
+
+---
+
 ## AI Collaboration Notice
 
-I migrated, debugged, and optimized this cloud setup, built the personal health agent framework, and created the developer CLI skills in collaboration with an AI coding partner (**Cline** running **Claude 3.5 Sonnet**). Together, we worked through several real-world engineering constraints: diagnosing kernel Out-Of-Memory (OOM) crashes via GCP serial logs, refactoring the Python API layer, resolving SQLite database locks, designing a lightweight sequential execution pipeline, compiling views serverlessly with Dataform, and designing automated daily/weekly agentic schedules.
+I migrated, debugged, and optimized this cloud setup, built the personal health agent framework, and created the developer CLI skills in collaboration with an AI coding partner (**Cline** running **Claude 3.5 Sonnet**).
 
 ---
 
@@ -29,16 +37,6 @@ I want to give special recognition to the developers, communities, and organizat
 *   **[Raspberry Pi](https://www.raspberrypi.com/)**: Served as the original platform where early versions of this pipeline were prototyped before cloud migration.
 *   **[Google Cloud Professional Data Engineer Certificate](https://www.credly.com/badges/8efeb8f9-dd9e-46d2-b7c0-cc1ba975194e)**: A major learning milestone that directly influenced the architecture and engineering choices in this project.
 *   **[Cline & Claude 3.5 Sonnet](https://github.com/gofireflyio/cline)**: Played the central developer role in migrating from the local Pi cluster to GCP, resolving lock contentions, designing the automated health agents, and writing developer-centric CLI skills.
-
----
-
-## Dashboard Preview (Public)
-
-<p align="center">
-  <img src="docs/images/dashboard_screenshot.png" alt="Dashboard preview:">
-</p>
-
-    
 
 ---
 
