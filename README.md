@@ -79,7 +79,7 @@ The workout tracker is designed to be quick to use on a daily basis while still 
 
 ## Conversational Health Copilot (Model Context Protocol)
 
-We designed and deployed an end-user facing conversational **Health Copilot** that runs natively in the background of your GCP VM, allowing secure, real-time natural language query execution over your BigQuery data warehouse.
+We designed and deployed an end-user facing conversational **Health Copilot** that runs natively in the background of the GCP VM, allowing secure, real-time natural language query execution over the BigQuery data warehouse.
 
 This implementation acts as an enterprise-grade sandbox (mirroring professional Salesforce/CRM-to-BigQuery setups) to demonstrate **Model Context Protocol (MCP)**, a secure, decoupled communication paradigm between large language models and databases.
 
@@ -90,9 +90,9 @@ This implementation acts as an enterprise-grade sandbox (mirroring professional 
 ### Key Architectural Pillars
 
 *   **Securely Decoupled Database Gateway**:
-    *   **The BigQuery MCP Server** (`/mcp_bigquery_server`): A standalone Python service built using **FastMCP**. It runs securely and privately in your VM background on port `8000`. It is the *only* component that holds GCP credentials or communicates with Google BigQuery, exposing strict read-only analytical query tools (`get_schema_info`, `execute_readonly_query`).
+    *   **The BigQuery MCP Server** (`/mcp_bigquery_server`): A standalone Python service built using **FastMCP**. It runs securely and privately in the VM background on port `8000`. It is the *only* component that holds GCP credentials or communicates with Google BigQuery, exposing strict read-only analytical query tools (`get_schema_info`, `execute_readonly_query`).
 *   **Conversational Frontend Orchestrator**:
-    *   **The Copilot UI** (`/health_copilot_ui`): A beautiful, dark-themed Streamlit chat dashboard that is hosted on your VM on port `8502` and publicly accessible over the web. It coordinates user inputs, executes Google Gemini 2.0 Flash`s function calls against the local MCP server, and formats responses.
+    *   **The Copilot UI** (`/health_copilot_ui`): A beautiful, dark-themed Streamlit chat dashboard that is hosted on the VM on port `8502` and publicly accessible over the web. It coordinates user inputs, executes Google Gemini 2.0 Flash`s function calls against the local MCP server, and formats responses.
 *   **Dynamic Data Charting Engine**:
     *   The Streamlit frontend features an automated Markdown parser that intercepts tabular SQL results returned by Gemini, converts them on-the-fly into Pandas DataFrames, and automatically plots interactive line and bar charts (using Altair).
 *   **SQL Audit and Transparency**:
