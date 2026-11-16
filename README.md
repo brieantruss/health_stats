@@ -59,6 +59,47 @@ I want to give special recognition to the developers, communities, and organizat
 
 ---
 
+## Tracker Workflow
+
+The workout tracker is designed to be quick to use on a daily basis while still capturing structured data for downstream analytics.
+
+1.  Start typing in the **Exercise Type** dropdown to filter the list in place. For example, typing `push` narrows the menu to push-up variations so it is easy to find the exact movement without scrolling through the full exercise catalog.
+
+    ![Tracker workflow step 1: searchable exercise dropdown](docs/images/tracker_step_1.png)
+
+2.  Select the exercise, confirm the date, and enter the most relevant quantity for that movement. Rep-based exercises can be logged with **reps** and optional **resistance**, while time-based movements and stretches can be logged with **duration** instead.
+
+    ![Tracker workflow step 2: entering reps and date](docs/images/tracker_step_2.png)
+
+3.  Submit the record and immediately verify it in the table at the bottom of the page. New entries show up in the tracker UI right away, are written into the `health_stats` database, and are then available for downstream syncing into BigQuery and dashboard analytics.
+
+    ![Tracker workflow step 3: new record appears in the table](docs/images/tracker_step_3.png)
+
+---
+
+## Conversational Health Copilot (Model Context Protocol)
+
+We designed and deployed an end-user facing conversational **Health Copilot** that runs natively in the background of your GCP VM, allowing secure, real-time natural language query execution over your BigQuery data warehouse.
+
+This implementation acts as an enterprise-grade sandbox (mirroring professional Salesforce/CRM-to-BigQuery setups) to demonstrate **Model Context Protocol (MCP)**, a secure, decoupled communication paradigm between large language models and databases.
+
+<p align="center">
+  <img src="docs/images/health_copilot_preview.png" alt="Personal Health Copilot UI" width="90%">
+</p>
+
+### Key Architectural Pillars
+
+*   **Securely Decoupled Database Gateway**:
+    *   **The BigQuery MCP Server** (`/mcp_bigquery_server`): A standalone Python service built using **FastMCP**. It runs securely and privately in your VM background on port `8000`. It is the *only* component that holds GCP credentials or communicates with Google BigQuery, exposing strict read-only analytical query tools (`get_schema_info`, `execute_readonly_query`).
+*   **Conversational Frontend Orchestrator**:
+    *   **The Copilot UI** (`/health_copilot_ui`): A beautiful, dark-themed Streamlit chat dashboard that is hosted on your VM on port `8502` and publicly accessible over the web. It coordinates user inputs, executes Google Gemini 2.0 Flash`s function calls against the local MCP server, and formats responses.
+*   **Dynamic Data Charting Engine**:
+    *   The Streamlit frontend features an automated Markdown parser that intercepts tabular SQL results returned by Gemini, converts them on-the-fly into Pandas DataFrames, and automatically plots interactive line and bar charts (using Altair).
+*   **SQL Audit and Transparency**:
+    *   Each conversational response features a collapsible audit drawer (`SQL Query Executed`) showing you the precise, raw BigQuery SQL syntax formulated by the AI, making it a powerful educational and debugging environment.
+
+---
+
 ## Scheduled Personal Health Agents
 
 The pipeline runs four autonomous agents (orchestrated via Prefect) that process historical trends and real-time conditions to deliver personalized coaching insights:
@@ -80,24 +121,6 @@ For developer operations, system monitoring, and rapid log entry, four interacti
 2.  **Historical Log Integrity & Gap Auditor** (`python3 scripts/skills/integrity_audit.py`): Scans the past 30 days of data in MySQL across core metrics (Sleep, Steps, Diet, GPS Locations, Blood Pressure) to identify and list any logging gaps.
 3.  **Quick-Log Terminal Logger** (`python3 scripts/skills/quick_log.py`): Enables lightning-fast logging directly from the shell. Supports logging water (`water <ml_amount>`) and searching/logging food descriptions (`food "<query>" <grams>`) matched against a local USDA dataset.
 4.  **Interactive Activity Planner** (`python3 scripts/skills/activity_planner.py`): Pulls 7-day activity suggestions and environmental planning scores from the compiled BigQuery Dataform views, outputting a color-coded upcoming schedule directly to the terminal.
-
----
-
-## Tracker Workflow
-
-The workout tracker is designed to be quick to use on a daily basis while still capturing structured data for downstream analytics.
-
-1.  Start typing in the **Exercise Type** dropdown to filter the list in place. For example, typing `push` narrows the menu to push-up variations so it is easy to find the exact movement without scrolling through the full exercise catalog.
-
-    ![Tracker workflow step 1: searchable exercise dropdown](docs/images/tracker_step_1.png)
-
-2.  Select the exercise, confirm the date, and enter the most relevant quantity for that movement. Rep-based exercises can be logged with **reps** and optional **resistance**, while time-based movements and stretches can be logged with **duration** instead.
-
-    ![Tracker workflow step 2: entering reps and date](docs/images/tracker_step_2.png)
-
-3.  Submit the record and immediately verify it in the table at the bottom of the page. New entries show up in the tracker UI right away, are written into the `health_stats` database, and are then available for downstream syncing into BigQuery and dashboard analytics.
-
-    ![Tracker workflow step 3: new record appears in the table](docs/images/tracker_step_3.png)
 
 ---
 
@@ -135,29 +158,6 @@ A suite of serverless Dataform compilation scripts (`definitions/*.sqlx`) transf
 *   `view_sleep_summary`: Aggregated weekly sleep trends, sleep stages ratios, and night-by-night recovery.
 *   `view_diet_recommendations`: Core daily macros and calorie intake matching fitness levels and workouts.
 *   `view_scorecard_summary`: Consolidated daily vitals scorecard for dashboard header widgets.
-
----
-
-## Conversational Health Copilot (Model Context Protocol)
-
-We designed and deployed an end-user facing conversational **Health Copilot** that runs natively in the background of your GCP VM, allowing secure, real-time natural language query execution over your BigQuery data warehouse.
-
-This implementation acts as an enterprise-grade sandbox (mirroring professional Salesforce/CRM-to-BigQuery setups) to demonstrate **Model Context Protocol (MCP)**, a secure, decoupled communication paradigm between large language models and databases.
-
-<p align="center">
-  <img src="docs/images/health_copilot_preview.png" alt="Personal Health Copilot UI" width="90%">
-</p>
-
-### Key Architectural Pillars
-
-*   **Securely Decoupled Database Gateway**:
-    *   **The BigQuery MCP Server** (`/mcp_bigquery_server`): A standalone Python service built using **FastMCP**. It runs securely and privately in your VM background on port `8000`. It is the *only* component that holds GCP credentials or communicates with Google BigQuery, exposing strict read-only analytical query tools (`get_schema_info`, `execute_readonly_query`).
-*   **Conversational Frontend Orchestrator**:
-    *   **The Copilot UI** (`/health_copilot_ui`): A beautiful, dark-themed Streamlit chat dashboard that is hosted on your VM on port `8502` and publicly accessible over the web. It coordinates user inputs, executes Google Gemini 2.0 Flash`s function calls against the local MCP server, and formats responses.
-*   **Dynamic Data Charting Engine**:
-    *   The Streamlit frontend features an automated Markdown parser that intercepts tabular SQL results returned by Gemini, converts them on-the-fly into Pandas DataFrames, and automatically plots interactive line and bar charts (using Altair).
-*   **SQL Audit and Transparency**:
-    *   Each conversational response features a collapsible audit drawer (`SQL Query Executed`) showing you the precise, raw BigQuery SQL syntax formulated by the AI, making it a powerful educational and debugging environment.
 
 ---
 
