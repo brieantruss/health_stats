@@ -8,7 +8,7 @@ Originally built manually and running on a local Raspberry Pi cluster, this syst
 
 ---
 
-## Dashboard Preview (Public)
+## Public Dashboard Preview
 
 <p align="center">
   <img src="docs/images/dashboard_screenshot.png" alt="Dashboard preview:">
