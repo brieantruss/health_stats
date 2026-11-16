@@ -34,7 +34,7 @@ I want to give special recognition to the developers, communities, and organizat
 
 ## Dashboard Preview (Simplified for Public Sharing)
 
-![Dashboard preview:](docs/images/dashboard_screenshot.png)
+    ![Dashboard preview:](docs/images/dashboard_screenshot.png)
 
 
 ---
