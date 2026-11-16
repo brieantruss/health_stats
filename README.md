@@ -44,21 +44,6 @@ I want to give special recognition to the developers, communities, and organizat
 
 ## Architecture & Data Flow
 
-```
-                                      [ Google Cloud Platform ]
-                                      
-  +----------------------+             +-------------------------------------------------+
-  |  Google Cloud Run    |             |                 GCP e2-micro VM                 |
-  |                      |             |                                                 |
-  |  +----------------+  |  API POST   |  +-------------------+   +-------------------+  |
-  |  |   Streamlit    |  |------------>|  |    Gunicorn APIs   |   |   Local MySQL     |  |
-  |  |  Workout Entry |  | (Port 5001) |  |   (Ports 5000/5001)  |   | (Optimized RAM)   |  |
-  |  +----------------+  |             |  +-------------------+   +---------^---------+  |
-  |                      |             |                                   |
-  |  (Scales to Zero!)   |             |  (Protected by a 2GB swap file)   |
-  +----------------------+             +-------------------------------------------------+
-```
-
 1.  **Log Workouts**: I log my weight and strength workouts on a Streamlit web app. It is hosted on Google Cloud Run and scales down to zero instances when inactive to keep compute costs at $0.
 2.  **API Layer**: The Streamlit app sends workout logs to a Flask API on port 5001 (served via Gunicorn on the VM), which writes them to MySQL.
 3.  **Automatic Ingestion**: A background Prefect daemon runs on the VM to fetch raw sleep, steps, heart rate, and GPS logs directly from Google Drive and Cloud Storage.
@@ -67,6 +52,10 @@ I want to give special recognition to the developers, communities, and organizat
 6.  **Analytics**: Looker Studio connects directly to **BigQuery** (instead of hitting the transactional MySQL database) to populate interactive dashboards tracking my health and fitness trends over time with zero transactional overhead!
 7.  **Dataform Transformation**: Google Cloud Dataform manages serverless SQL workflows in BigQuery, joining raw tables into optimized analytical views for downstream dashboarding and agent consumption.
 8.  **Automated Health Agents**: Specialized agents run on top of the BigQuery warehouse, analyzing metrics to generate markdown reports and uploading daily and weekly summaries back to Google Drive.
+
+<p align="center">
+  <img src="docs/images/codebase_diagram.png" alt="Codebase Diagram:">
+</p>
 
 ---
 
