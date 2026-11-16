@@ -32,7 +32,7 @@ I want to give special recognition to the developers, communities, and organizat
 
 ---
 
-## Dashboard Preview (Simplified for Public Sharing)
+## Dashboard Preview (Public)
 
 <p align="center">
   <img src="docs/images/dashboard_screenshot.png" alt="Dashboard preview:">
